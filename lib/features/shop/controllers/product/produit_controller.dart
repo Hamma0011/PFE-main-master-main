@@ -4,6 +4,7 @@ import 'package:caferesto/features/shop/models/produit_model.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../../../utils/popups/loaders.dart';
 import '../etablissement_controller.dart';
@@ -28,6 +29,9 @@ class ProduitController extends GetxController {
   // --- DÉPENDANCES ---
   final UserController userController = Get.find<UserController>();
   late final ProduitRepository produitRepository;
+  final SupabaseClient _supabase = Supabase.instance.client;
+  RealtimeChannel? _productsChannel;
+  RealtimeChannel? _featuredProductsChannel;
 
   // --- ÉTATS ET LISTES ---
   final isLoading = false.obs;
@@ -42,6 +46,18 @@ class ProduitController extends GetxController {
     super.onInit();
     produitRepository = Get.put(ProduitRepository());
     fetchFeaturedProducts();
+    _subscribeToRealtimeProducts();
+    _subscribeToRealtimeFeaturedProducts();
+  }
+
+  @override
+  void onClose() {
+    _unsubscribeFromRealtime();
+    nameController.dispose();
+    descriptionController.dispose();
+    preparationTimeController.dispose();
+    stockQuantityController.dispose();
+    super.onClose();
   }
 
   void filterProducts(String query) {
@@ -335,13 +351,116 @@ class ProduitController extends GetxController {
         .toList();
   }
 
-  @override
-  void onClose() {
-    nameController.dispose();
-    descriptionController.dispose();
-    preparationTimeController.dispose();
-    stockQuantityController.dispose();
-    super.onClose();
+  /// Subscription temps réel pour tous les produits
+  void _subscribeToRealtimeProducts() {
+    _productsChannel = _supabase.channel('produit_controller_products');
+
+    _productsChannel!.onPostgresChanges(
+      event: PostgresChangeEvent.all,
+      schema: 'public',
+      table: 'produits',
+      callback: (payload) {
+        final eventType = payload.eventType;
+        final newData = payload.newRecord;
+        final oldData = payload.oldRecord;
+
+        try {
+          if (eventType == PostgresChangeEvent.insert) {
+            final produit = ProduitModel.fromMap(newData);
+            allProducts.insert(0, produit);
+            allProducts.refresh();
+            applyFilters();
+          } else if (eventType == PostgresChangeEvent.update) {
+            final produit = ProduitModel.fromMap(newData);
+            final index = allProducts.indexWhere((p) => p.id == produit.id);
+            if (index != -1) {
+              allProducts[index] = produit;
+              allProducts.refresh();
+              applyFilters();
+            }
+          } else if (eventType == PostgresChangeEvent.delete) {
+            final id = oldData['id']?.toString();
+            if (id != null) {
+              allProducts.removeWhere((p) => p.id == id);
+              allProducts.refresh();
+              applyFilters();
+            }
+          }
+        } catch (e) {
+          debugPrint('Erreur traitement changement produit temps réel: $e');
+        }
+      },
+    );
+
+    _productsChannel!.subscribe();
+  }
+
+  /// Subscription temps réel pour les produits featured
+  void _subscribeToRealtimeFeaturedProducts() {
+    _featuredProductsChannel = _supabase.channel('produit_controller_featured');
+
+    _featuredProductsChannel!.onPostgresChanges(
+      event: PostgresChangeEvent.all,
+      schema: 'public',
+      table: 'produits',
+      filter: PostgresChangeFilter(
+        type: PostgresChangeFilterType.eq,
+        column: 'is_featured',
+        value: true,
+      ),
+      callback: (payload) {
+        final eventType = payload.eventType;
+        final newData = payload.newRecord;
+        final oldData = payload.oldRecord;
+
+        try {
+          if (eventType == PostgresChangeEvent.insert) {
+            final produit = ProduitModel.fromMap(newData);
+            if (produit.isFeatured == true) {
+              featuredProducts.insert(0, produit);
+              featuredProducts.refresh();
+            }
+          } else if (eventType == PostgresChangeEvent.update) {
+            final produit = ProduitModel.fromMap(newData);
+            final index = featuredProducts.indexWhere((p) => p.id == produit.id);
+            if (produit.isFeatured == true) {
+              if (index != -1) {
+                featuredProducts[index] = produit;
+              } else {
+                featuredProducts.insert(0, produit);
+              }
+            } else {
+              if (index != -1) {
+                featuredProducts.removeAt(index);
+              }
+            }
+            featuredProducts.refresh();
+          } else if (eventType == PostgresChangeEvent.delete) {
+            final id = oldData['id']?.toString();
+            if (id != null) {
+              featuredProducts.removeWhere((p) => p.id == id);
+              featuredProducts.refresh();
+            }
+          }
+        } catch (e) {
+          debugPrint('Erreur traitement changement produit featured temps réel: $e');
+        }
+      },
+    );
+
+    _featuredProductsChannel!.subscribe();
+  }
+
+  /// Désabonnement des subscriptions temps réel
+  void _unsubscribeFromRealtime() {
+    if (_productsChannel != null) {
+      _supabase.removeChannel(_productsChannel!);
+      _productsChannel = null;
+    }
+    if (_featuredProductsChannel != null) {
+      _supabase.removeChannel(_featuredProductsChannel!);
+      _featuredProductsChannel = null;
+    }
   }
 
   Future<List<String>> pickMultipleImages() async {

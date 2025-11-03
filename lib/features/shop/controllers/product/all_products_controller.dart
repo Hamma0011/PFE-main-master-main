@@ -1,4 +1,5 @@
 import 'package:get/get.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../../../data/repositories/product/produit_repository.dart';
 import '../../models/produit_model.dart';
 
@@ -6,6 +7,10 @@ class AllProductsController extends GetxController {
   static AllProductsController get instance => Get.find();
 
   final repository = ProduitRepository.instance;
+  final SupabaseClient _supabase = Supabase.instance.client;
+  RealtimeChannel? _productsChannel;
+  RealtimeChannel? _brandProductsChannel;
+  String? _currentBrandId;
 
   /// Liste complète des produits
   final RxList<ProduitModel> products = <ProduitModel>[].obs;
@@ -24,6 +29,13 @@ class AllProductsController extends GetxController {
   void onInit() {
     super.onInit();
     fetchAllProducts();
+    _subscribeToRealtimeProducts();
+  }
+
+  @override
+  void onClose() {
+    _unsubscribeFromRealtime();
+    super.onClose();
   }
 
   /// Assigner les produits d'une marque spécifique
@@ -94,6 +106,11 @@ class AllProductsController extends GetxController {
     try {
       isLoading.value = true;
 
+      // Désabonner de l'ancien établissement si différent
+      if (_currentBrandId != null && _currentBrandId != etablissementId) {
+        _unsubscribeFromBrandProducts();
+      }
+
       // Appel au dépôt pour récupérer les produits du brand
       final produits =
           await repository.getProductsByEtablissement(etablissementId);
@@ -101,6 +118,10 @@ class AllProductsController extends GetxController {
       // Assigner à la liste réactive
       brandProducts.assignAll(produits);
       selectedBrandCategoryId.value = '';
+      _currentBrandId = etablissementId;
+
+      // S'abonner aux changements temps réel pour cet établissement
+      _subscribeToBrandProducts(etablissementId);
 
       // Trier après assignation (même logique que pour tous les produits)
       sortBrandProducts(selectedSortOption.value);
@@ -178,5 +199,114 @@ class AllProductsController extends GetxController {
           (product.description ?? '').toLowerCase().contains(searchText); // ||
       // (product.categoryName ?? '').toLowerCase().contains(searchText);
     }).toList();
+  }
+
+  /// Subscription temps réel pour tous les produits
+  void _subscribeToRealtimeProducts() {
+    _productsChannel = _supabase.channel('products_changes');
+
+    _productsChannel!.onPostgresChanges(
+      event: PostgresChangeEvent.all,
+      schema: 'public',
+      table: 'produits',
+      callback: (payload) {
+        final eventType = payload.eventType;
+        final newData = payload.newRecord;
+        final oldData = payload.oldRecord;
+
+        try {
+          if (eventType == PostgresChangeEvent.insert) {
+            final produit = ProduitModel.fromMap(newData);
+            products.insert(0, produit);
+            products.refresh();
+            sortProducts(selectedSortOption.value);
+          } else if (eventType == PostgresChangeEvent.update) {
+            final produit = ProduitModel.fromMap(newData);
+            final index = products.indexWhere((p) => p.id == produit.id);
+            if (index != -1) {
+              products[index] = produit;
+              products.refresh();
+              sortProducts(selectedSortOption.value);
+            }
+          } else if (eventType == PostgresChangeEvent.delete) {
+            final id = oldData['id']?.toString();
+            if (id != null) {
+              products.removeWhere((p) => p.id == id);
+              products.refresh();
+            }
+          }
+        } catch (e) {
+          print('Erreur traitement changement produit temps réel: $e');
+        }
+      },
+    );
+
+    _productsChannel!.subscribe();
+  }
+
+  /// Subscription temps réel pour les produits d'un établissement
+  void _subscribeToBrandProducts(String etablissementId) {
+    _unsubscribeFromBrandProducts();
+
+    _brandProductsChannel = _supabase.channel('brand_products_changes_$etablissementId');
+
+    _brandProductsChannel!.onPostgresChanges(
+      event: PostgresChangeEvent.all,
+      schema: 'public',
+      table: 'produits',
+      filter: PostgresChangeFilter(
+        type: PostgresChangeFilterType.eq,
+        column: 'etablissement_id',
+        value: etablissementId,
+      ),
+      callback: (payload) {
+        final eventType = payload.eventType;
+        final newData = payload.newRecord;
+        final oldData = payload.oldRecord;
+
+        try {
+          if (eventType == PostgresChangeEvent.insert) {
+            final produit = ProduitModel.fromMap(newData);
+            brandProducts.insert(0, produit);
+            brandProducts.refresh();
+            sortBrandProducts(selectedSortOption.value);
+          } else if (eventType == PostgresChangeEvent.update) {
+            final produit = ProduitModel.fromMap(newData);
+            final index = brandProducts.indexWhere((p) => p.id == produit.id);
+            if (index != -1) {
+              brandProducts[index] = produit;
+              brandProducts.refresh();
+              sortBrandProducts(selectedSortOption.value);
+            }
+          } else if (eventType == PostgresChangeEvent.delete) {
+            final id = oldData['id']?.toString();
+            if (id != null) {
+              brandProducts.removeWhere((p) => p.id == id);
+              brandProducts.refresh();
+            }
+          }
+        } catch (e) {
+          print('Erreur traitement changement produit établissement temps réel: $e');
+        }
+      },
+    );
+
+    _brandProductsChannel!.subscribe();
+  }
+
+  /// Désabonnement des subscriptions temps réel
+  void _unsubscribeFromRealtime() {
+    if (_productsChannel != null) {
+      _supabase.removeChannel(_productsChannel!);
+      _productsChannel = null;
+    }
+    _unsubscribeFromBrandProducts();
+  }
+
+  void _unsubscribeFromBrandProducts() {
+    if (_brandProductsChannel != null) {
+      _supabase.removeChannel(_brandProductsChannel!);
+      _brandProductsChannel = null;
+    }
   }
 }
