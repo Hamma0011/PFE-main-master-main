@@ -1,0 +1,113 @@
+name: caferesto
+description: "application mobile de précommande en restauration rapide, intégrant géolocalisation et synchronisation en temps réel"
+# The following line prevents the package from being accidentally published to
+# pub.dev using `flutter pub publish`. This is preferred for private packages.
+publish_to: "none" # Remove this line if you wish to publish to pub.dev
+
+version: 1.0.0+1
+
+environment:
+  sdk: ">=3.3.4 <4.0.0"
+
+#------------------- PACKAGES -------------------#
+dependencies:
+  flutter:
+    sdk: flutter
+  shared_preferences:
+  # Utility Packages
+  intl:
+  logger:
+  url_launcher:
+  url_strategy: ^0.2.0
+
+  flutter_native_splash:
+  smooth_page_indicator:
+  lottie:
+  shimmer:
+  cached_network_image:
+  flutter_dotenv:
+  # Icons
+  iconsax:
+  # The following adds the Cupertino Icons font to your application.
+  # Use with the CupertinoIcons class for iOS style icons.
+  cupertino_icons: ^1.0.6
+  badges: ^3.1.2
+
+  # State Management
+  get:
+  get_storage:
+  #firebase_storage:
+  connectivity_plus:
+
+  # Product Specific
+  readmore:
+  carousel_slider:
+  flutter_rating_bar:
+  image_picker: ^1.2.0
+  file_picker: ^8.0.0
+  mime: ^1.0.4
+  geolocator: ^9.0.2
+  dio: ^5.0.0
+  # geocoding: ^2.0.5
+  cloud_firestore: 5.6.12
+  google_sign_in: ^6.3.0
+  flutter_map: 8.2.2
+  latlong2: ^0.9.1
+  http: ^1.2.2
+  flutter_map_cancellable_tile_provider:
+
+  # Supabase
+  supabase_flutter: ^2.9.1
+  #3d animation controller
+  flutter_3d_controller: ^2.0.1 # For 3D perspective effects
+  flutter_localization: ^0.3.3
+  searchable_listview: ^2.19.3
+  share_plus: ^7.0.1
+
+flutter_native_splash:
+  color: "#1e293b" # Deep slate blue for modern feel
+  image: assets\logos\app_logo_dark.png
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^5.0.0
+
+flutter:
+  uses-material-design: true
+
+  # To add assets to your application, add an assets section, like this:
+  assets:
+    - assets/config/.env
+    - assets/img/coffee_image.jpg
+    - assets/img/sugar_cube.png
+    - assets/logos/
+    - assets/images/on_boarding_images/
+    - assets/images/animations/
+    - assets/images/products/
+    - assets/images/user/
+    - assets/icons/categories/
+    - assets/brands/
+    - assets/banners/
+    - assets/icons/payment_methods/
+    - assets/images/reviews/
+    - assets/images/products/cafe/
+
+  fonts:
+    - family: Poppins
+      fonts:
+        - asset: assets/fonts/Poppins-Light.ttf
+          weight: 300
+        - asset: assets/fonts/Poppins-Regular.ttf
+          weight: 400
+        - asset: assets/fonts/Poppins-Italic.ttf
+          style: italic
+        - asset: assets/fonts/Poppins-Medium.ttf
+          weight: 500
+        - asset: assets/fonts/Poppins-MediumItalic.ttf
+          weight: 400
+          style: italic
+        - asset: assets/fonts/Poppins-SemiBold.ttf
+          weight: 600
+        - asset: assets/fonts/Poppins-Bold.ttf
+          weight: 800
