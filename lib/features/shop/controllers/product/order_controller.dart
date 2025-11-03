@@ -6,11 +6,13 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../../../common/widgets/success_screen/success_screen.dart';
 import '../../../../data/repositories/authentication/authentication_repository.dart';
 import '../../../../data/repositories/order/order_repository.dart';
+import '../../../../data/repositories/product/produit_repository.dart';
 import '../../../../navigation_menu.dart';
 import '../../../../utils/constants/image_strings.dart';
 import '../../../../utils/popups/full_screen_loader.dart';
 import '../../../../utils/popups/loaders.dart';
 import '../../../personalization/controllers/address_controller.dart';
+import '../../models/cart_item_model.dart';
 import '../../models/order_model.dart';
 import 'panier_controller.dart';
 import 'checkout_controller.dart';
@@ -26,6 +28,7 @@ class OrderController extends GetxController {
   }
 
   final orderRepository = Get.put(OrderRepository());
+  final produitRepository = ProduitRepository.instance;
   final cartController = CartController.instance;
   final userController = UserController.instance;
   final _db = Supabase.instance.client;
@@ -103,6 +106,22 @@ class OrderController extends GetxController {
       if (orderIndex == -1) throw 'Commande non trouvée';
 
       final order = orders[orderIndex];
+      final oldStatus = order.status;
+
+      // Gérer le stock selon le changement de statut
+      // Si on refuse ou annule, restaurer le stock
+      if ((newStatus == OrderStatus.refused || newStatus == OrderStatus.cancelled) &&
+          oldStatus == OrderStatus.pending) {
+        try {
+          debugPrint('🔄 Début de la restauration du stock pour le changement de statut (${oldStatus.name} -> ${newStatus.name})');
+          await _increaseStockForOrder(order.items);
+          debugPrint('✅ Stock restauré avec succès');
+        } catch (e, stackTrace) {
+          debugPrint('❌ Erreur lors de la restauration du stock: $e');
+          debugPrint('Stack trace: $stackTrace');
+          // Continuer même si la restauration du stock échoue
+        }
+      }
 
       // Prepare update data
       final updates = {
@@ -329,6 +348,23 @@ class OrderController extends GetxController {
         updatedAt: DateTime.now(),
       );
       print(order);
+      
+      // Diminuer le stock des produits stockables commandés AVANT de sauvegarder la commande
+      try {
+        debugPrint('🔄 Début de la mise à jour du stock avant sauvegarde de la commande');
+        await _decreaseStockForOrder(order.items);
+        debugPrint('✅ Stock mis à jour avec succès');
+      } catch (e, stackTrace) {
+        debugPrint('❌ Erreur lors de la mise à jour du stock: $e');
+        debugPrint('Stack trace: $stackTrace');
+        TFullScreenLoader.stopLoading();
+        TLoaders.errorSnackBar(
+          title: 'Erreur de stock',
+          message: 'Erreur lors de la mise à jour du stock: $e',
+        );
+        return; // Ne pas continuer si la mise à jour du stock échoue
+      }
+      
       await orderRepository.saveOrder(order, user.id);
 
       cartController.clearCart();
@@ -367,6 +403,18 @@ class OrderController extends GetxController {
         return;
       }
 
+      // Restaurer le stock des produits si la commande était en attente
+      try {
+        debugPrint('🔄 Début de la restauration du stock pour l\'annulation de la commande ${orderId}');
+        await _increaseStockForOrder(order.items);
+        debugPrint('✅ Stock restauré avec succès');
+      } catch (e, stackTrace) {
+        debugPrint('❌ Erreur lors de la restauration du stock: $e');
+        debugPrint('Stack trace: $stackTrace');
+        // Continuer même si la restauration du stock échoue
+        // Ne pas bloquer l'annulation de la commande
+      }
+
       // Update locally first for immediate UI feedback
       orders[orderIndex] = order.copyWith(status: OrderStatus.cancelled);
       orders.refresh();
@@ -400,6 +448,85 @@ class OrderController extends GetxController {
     } finally {
       isUpdating.value = false;
     }
+  }
+
+  /// Diminuer le stock des produits stockables lors de la création d'une commande
+  Future<void> _decreaseStockForOrder(List<CartItemModel> items) async {
+    debugPrint('📦 Début de la diminution du stock pour ${items.length} items');
+    
+    for (final item in items) {
+      try {
+        debugPrint('📦 Traitement du produit: ${item.productId}, quantité: ${item.quantity}');
+        
+        // Récupérer le produit pour vérifier s'il est stockable
+        final productResponse = await _db
+            .from('produits')
+            .select('est_stockable, quantite_stock, product_type, tailles_prix')
+            .eq('id', item.productId)
+            .single();
+
+        final isStockable = productResponse['est_stockable'] as bool? ?? false;
+        debugPrint('📦 Produit ${item.productId} est stockable: $isStockable');
+        
+        if (!isStockable) {
+          debugPrint('📦 Produit ${item.productId} non stockable, ignoré');
+          continue; // Produit non stockable, passer au suivant
+        }
+
+        // Pour tous les produits stockables (simples et variables), le stock est dans quantite_stock
+        final currentStock = (productResponse['quantite_stock'] as num?)?.toInt() ?? 0;
+        debugPrint('📦 Stock actuel: $currentStock, quantité à soustraire: ${item.quantity}');
+        
+        await produitRepository.updateProductStock(item.productId, -item.quantity);
+        debugPrint('✅ Stock mis à jour pour produit ${item.productId}');
+      } catch (e, stackTrace) {
+        debugPrint('❌ Erreur lors de la diminution du stock pour ${item.productId}: $e');
+        debugPrint('Stack trace: $stackTrace');
+        // Ne pas lancer l'erreur, continuer avec les autres produits
+        // mais loguer l'erreur pour le débogage
+      }
+    }
+    
+    debugPrint('📦 Fin de la diminution du stock');
+  }
+
+  /// Restaurer le stock des produits stockables lors de l'annulation/refus d'une commande
+  Future<void> _increaseStockForOrder(List<CartItemModel> items) async {
+    debugPrint('📦 Début de la restauration du stock pour ${items.length} items');
+    
+    for (final item in items) {
+      try {
+        debugPrint('📦 Restauration du stock pour produit: ${item.productId}, quantité: ${item.quantity}');
+        
+        // Récupérer le produit pour vérifier s'il est stockable
+        final productResponse = await _db
+            .from('produits')
+            .select('est_stockable, quantite_stock, product_type, tailles_prix')
+            .eq('id', item.productId)
+            .single();
+
+        final isStockable = productResponse['est_stockable'] as bool? ?? false;
+        debugPrint('📦 Produit ${item.productId} est stockable: $isStockable');
+        
+        if (!isStockable) {
+          debugPrint('📦 Produit ${item.productId} non stockable, ignoré');
+          continue; // Produit non stockable, passer au suivant
+        }
+
+        // Pour tous les produits stockables (simples et variables), le stock est dans quantite_stock
+        final currentStock = (productResponse['quantite_stock'] as num?)?.toInt() ?? 0;
+        debugPrint('📦 Stock actuel: $currentStock, quantité à ajouter: ${item.quantity}');
+        
+        await produitRepository.updateProductStock(item.productId, item.quantity);
+        debugPrint('✅ Stock restauré pour produit ${item.productId}');
+      } catch (e, stackTrace) {
+        debugPrint('❌ Erreur lors de la restauration du stock pour ${item.productId}: $e');
+        debugPrint('Stack trace: $stackTrace');
+        // Continuer avec les autres produits même en cas d'erreur
+      }
+    }
+    
+    debugPrint('📦 Fin de la restauration du stock');
   }
 
   Future<void> updateOrderDetails({

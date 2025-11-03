@@ -2,6 +2,7 @@ import 'package:get/get.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../../../data/repositories/product/produit_repository.dart';
 import '../../models/produit_model.dart';
+import '../../models/etablissement_model.dart';
 
 class AllProductsController extends GetxController {
   static AllProductsController get instance => Get.find();
@@ -49,7 +50,18 @@ class AllProductsController extends GetxController {
     try {
       isLoading.value = true;
       final all = await repository.getAllProducts();
-      products.assignAll(all);
+      
+      // Charger l'établissement pour chaque produit si manquant
+      final allWithEtab = await Future.wait(
+        all.map((produit) async {
+          if (produit.etablissement == null && produit.etablissementId.isNotEmpty) {
+            return await _loadEtablissementForProduct(produit);
+          }
+          return produit;
+        }),
+      );
+
+      products.assignAll(allWithEtab);
 
       // Trier après assignation
       sortProducts(selectedSortOption.value);
@@ -104,7 +116,14 @@ class AllProductsController extends GetxController {
   /// Récupère et assigne les produits d'une marque spécifique
   Future<void> fetchBrandProducts(String etablissementId) async {
     try {
-      isLoading.value = true;
+      // Ne réinitialiser que si ce n'est pas déjà le même établissement
+      if (_currentBrandId != etablissementId) {
+        isLoading.value = true;
+        brandProducts.clear();
+      } else if (!isLoading.value) {
+        // Si c'est le même établissement mais qu'on n'est pas en train de charger, mettre à jour
+        isLoading.value = true;
+      }
 
       // Désabonner de l'ancien établissement si différent
       if (_currentBrandId != null && _currentBrandId != etablissementId) {
@@ -115,8 +134,18 @@ class AllProductsController extends GetxController {
       final produits =
           await repository.getProductsByEtablissement(etablissementId);
 
+      // Charger l'établissement pour chaque produit si manquant
+      final produitsWithEtab = await Future.wait(
+        produits.map((produit) async {
+          if (produit.etablissement == null) {
+            return await _loadEtablissementForBrandProduct(produit, etablissementId);
+          }
+          return produit;
+        }),
+      );
+
       // Assigner à la liste réactive
-      brandProducts.assignAll(produits);
+      brandProducts.assignAll(produitsWithEtab);
       selectedBrandCategoryId.value = '';
       _currentBrandId = etablissementId;
 
@@ -201,6 +230,29 @@ class AllProductsController extends GetxController {
     }).toList();
   }
 
+  /// Charger l'établissement pour un produit si manquant
+  Future<ProduitModel> _loadEtablissementForProduct(ProduitModel produit) async {
+    if (produit.etablissement != null || produit.etablissementId.isEmpty) {
+      return produit;
+    }
+
+    try {
+      final etabResponse = await _supabase
+          .from('etablissements')
+          .select('*')
+          .eq('id', produit.etablissementId)
+          .single();
+
+      if (etabResponse != null) {
+        final etab = Etablissement.fromJson(etabResponse);
+        return produit.copyWith(etablissement: etab);
+      }
+    } catch (e) {
+      print('Erreur chargement établissement pour produit: $e');
+    }
+    return produit;
+  }
+
   /// Subscription temps réel pour tous les produits
   void _subscribeToRealtimeProducts() {
     _productsChannel = _supabase.channel('products_changes');
@@ -209,19 +261,32 @@ class AllProductsController extends GetxController {
       event: PostgresChangeEvent.all,
       schema: 'public',
       table: 'produits',
-      callback: (payload) {
+      callback: (payload) async {
         final eventType = payload.eventType;
         final newData = payload.newRecord;
         final oldData = payload.oldRecord;
 
         try {
           if (eventType == PostgresChangeEvent.insert) {
-            final produit = ProduitModel.fromMap(newData);
-            products.insert(0, produit);
+            var produit = ProduitModel.fromMap(newData);
+            // Charger l'établissement si manquant
+            if (produit.etablissement == null && produit.etablissementId.isNotEmpty) {
+              produit = await _loadEtablissementForProduct(produit);
+            }
+            final index = products.indexWhere((p) => p.id == produit.id);
+            if (index == -1) {
+              products.insert(0, produit);
+            } else {
+              products[index] = produit;
+            }
             products.refresh();
             sortProducts(selectedSortOption.value);
           } else if (eventType == PostgresChangeEvent.update) {
-            final produit = ProduitModel.fromMap(newData);
+            var produit = ProduitModel.fromMap(newData);
+            // Charger l'établissement si manquant
+            if (produit.etablissement == null && produit.etablissementId.isNotEmpty) {
+              produit = await _loadEtablissementForProduct(produit);
+            }
             final index = products.indexWhere((p) => p.id == produit.id);
             if (index != -1) {
               products[index] = produit;
@@ -244,6 +309,30 @@ class AllProductsController extends GetxController {
     _productsChannel!.subscribe();
   }
 
+  /// Charger l'établissement pour un produit de marque si manquant
+  Future<ProduitModel> _loadEtablissementForBrandProduct(
+      ProduitModel produit, String etablissementId) async {
+    if (produit.etablissement != null) {
+      return produit;
+    }
+
+    try {
+      final etabResponse = await _supabase
+          .from('etablissements')
+          .select('*')
+          .eq('id', etablissementId)
+          .single();
+
+      if (etabResponse != null) {
+        final etab = Etablissement.fromJson(etabResponse);
+        return produit.copyWith(etablissement: etab);
+      }
+    } catch (e) {
+      print('Erreur chargement établissement pour produit marque: $e');
+    }
+    return produit;
+  }
+
   /// Subscription temps réel pour les produits d'un établissement
   void _subscribeToBrandProducts(String etablissementId) {
     _unsubscribeFromBrandProducts();
@@ -259,19 +348,32 @@ class AllProductsController extends GetxController {
         column: 'etablissement_id',
         value: etablissementId,
       ),
-      callback: (payload) {
+      callback: (payload) async {
         final eventType = payload.eventType;
         final newData = payload.newRecord;
         final oldData = payload.oldRecord;
 
         try {
           if (eventType == PostgresChangeEvent.insert) {
-            final produit = ProduitModel.fromMap(newData);
-            brandProducts.insert(0, produit);
+            var produit = ProduitModel.fromMap(newData);
+            // Charger l'établissement si manquant
+            if (produit.etablissement == null && produit.etablissementId.isNotEmpty) {
+              produit = await _loadEtablissementForBrandProduct(produit, etablissementId);
+            }
+            final index = brandProducts.indexWhere((p) => p.id == produit.id);
+            if (index == -1) {
+              brandProducts.insert(0, produit);
+            } else {
+              brandProducts[index] = produit;
+            }
             brandProducts.refresh();
             sortBrandProducts(selectedSortOption.value);
           } else if (eventType == PostgresChangeEvent.update) {
-            final produit = ProduitModel.fromMap(newData);
+            var produit = ProduitModel.fromMap(newData);
+            // Charger l'établissement si manquant
+            if (produit.etablissement == null && produit.etablissementId.isNotEmpty) {
+              produit = await _loadEtablissementForBrandProduct(produit, etablissementId);
+            }
             final index = brandProducts.indexWhere((p) => p.id == produit.id);
             if (index != -1) {
               brandProducts[index] = produit;

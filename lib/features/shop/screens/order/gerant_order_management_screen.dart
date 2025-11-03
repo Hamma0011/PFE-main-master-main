@@ -10,6 +10,7 @@ import '../../../../utils/constants/sizes.dart';
 import '../../../../utils/helpers/helper_functions.dart';
 import '../../../../utils/popups/loaders.dart';
 import '../../../personalization/controllers/user_controller.dart';
+import '../../controllers/etablissement_controller.dart';
 import '../../controllers/product/order_controller.dart';
 import '../../models/order_model.dart';
 
@@ -26,6 +27,9 @@ class _GerantOrderManagementScreenState
     with SingleTickerProviderStateMixin {
   final OrderController orderController = OrderController.instance;
   final UserController userController = Get.find<UserController>();
+  final EtablissementController etablissementController = EtablissementController.instance;
+  
+  String? _currentEtablissementId;
 
   late TabController _tabController;
   final List<String> _tabLabels = [
@@ -55,9 +59,21 @@ class _GerantOrderManagementScreenState
 
   Future<void> _loadGerantOrders() async {
     try {
-      // FIX: Check if user has establishment
-      if (!userController.hasEtablissement) {
-        // Use Future.delayed to avoid BuildContext issues
+      // Vérifier le rôle de l'utilisateur
+      if (userController.userRole != 'Gérant') {
+        Future.delayed(Duration.zero, () {
+          TLoaders.errorSnackBar(
+            title: "Erreur d'accès",
+            message: "Seuls les gérants peuvent accéder à cette page.",
+          );
+        });
+        return;
+      }
+
+      // Récupérer l'établissement de l'utilisateur connecté
+      final etablissement = await etablissementController.getEtablissementUtilisateurConnecte();
+      
+      if (etablissement == null || etablissement.id == null || etablissement.id!.isEmpty) {
         Future.delayed(Duration.zero, () {
           TLoaders.errorSnackBar(
             title: "Erreur d'accès",
@@ -67,20 +83,9 @@ class _GerantOrderManagementScreenState
         return;
       }
 
-      // FIX: Use the correct establishment ID getter
-      final etablissementId = userController.currentEtablissementId;
-      if (etablissementId == null || etablissementId.isEmpty) {
-        Future.delayed(Duration.zero, () {
-          TLoaders.errorSnackBar(
-            title: "ID établissement manquant",
-            message: "Impossible de charger les commandes.",
-          );
-        });
-        return;
-      }
-
+      final etablissementId = etablissement.id!;
+      _currentEtablissementId = etablissementId;
       debugPrint('🔄 Loading orders for establishment: $etablissementId');
-      print(etablissementId);
       await orderController.fetchGerantOrders(etablissementId);
     } catch (e) {
       debugPrint('Error in _loadGerantOrders: $e');
@@ -96,21 +101,40 @@ class _GerantOrderManagementScreenState
   List<OrderModel> _getFilteredOrders(int tabIndex) {
     List<OrderModel> filteredOrders;
 
+    // S'assurer que seules les commandes de l'établissement du gérant sont affichées
+    List<OrderModel> ordersToFilter = orderController.orders;
+    
+    // Filtrer par établissement si on a un ID d'établissement
+    if (_currentEtablissementId != null && _currentEtablissementId!.isNotEmpty) {
+      ordersToFilter = ordersToFilter
+          .where((order) => order.etablissementId == _currentEtablissementId)
+          .toList();
+    }
+
     switch (tabIndex) {
       case 0:
-        filteredOrders = orderController.orders;
+        filteredOrders = ordersToFilter;
         break;
       case 1:
-        filteredOrders = orderController.pendingOrders;
+        filteredOrders = ordersToFilter
+            .where((order) => order.status == OrderStatus.pending)
+            .toList();
         break;
       case 2:
-        filteredOrders = orderController.activeOrders;
+        filteredOrders = ordersToFilter
+            .where((order) => order.status == OrderStatus.preparing || 
+                           order.status == OrderStatus.ready)
+            .toList();
         break;
       case 3:
-        filteredOrders = orderController.completedOrders;
+        filteredOrders = ordersToFilter
+            .where((order) => order.status == OrderStatus.delivered ||
+                           order.status == OrderStatus.cancelled ||
+                           order.status == OrderStatus.refused)
+            .toList();
         break;
       default:
-        filteredOrders = orderController.orders;
+        filteredOrders = ordersToFilter;
     }
 
     // Apply search filter
@@ -128,6 +152,37 @@ class _GerantOrderManagementScreenState
   @override
   Widget build(BuildContext context) {
     final dark = THelperFunctions.isDarkMode(context);
+
+    // Vérification supplémentaire : seul le gérant peut voir cette page
+    if (userController.userRole != 'Gérant') {
+      return Scaffold(
+        appBar: TAppBar(
+          title: Text(
+            'Gestion des Commandes',
+            style: Theme.of(context).textTheme.headlineSmall,
+          ),
+        ),
+        body: Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(Iconsax.lock, size: 64, color: Colors.grey.shade400),
+              const SizedBox(height: 16),
+              Text(
+                'Accès restreint',
+                style: Theme.of(context).textTheme.headlineSmall,
+              ),
+              const SizedBox(height: 8),
+              Text(
+                'Seuls les gérants peuvent accéder à cette page.',
+                style: Theme.of(context).textTheme.bodyMedium,
+                textAlign: TextAlign.center,
+              ),
+            ],
+          ),
+        ),
+      );
+    }
 
     return Scaffold(
       appBar: TAppBar(

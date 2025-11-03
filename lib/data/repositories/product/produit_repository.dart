@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:get/get.dart';
@@ -183,7 +184,7 @@ class ProduitRepository extends GetxController {
     try {
       final response = await _db
           .from(_table)
-          .select('*')
+          .select('*, etablissement:etablissement_id(*)')
           .eq('etablissement_id', etablissementId)
           .order('created_at', ascending: false);
       return response.map((produit) => ProduitModel.fromMap(produit)).toList();
@@ -242,6 +243,105 @@ class ProduitRepository extends GetxController {
       throw 'Erreur base de données : ${e.code} - ${e.message}';
     } catch (e) {
       throw 'Erreur lors de la suppression du produit : $e';
+    }
+  }
+
+  /// Mettre à jour le stock d'un produit à une valeur absolue
+  Future<void> setProductStock(String productId, int newStock) async {
+    try {
+      debugPrint('📦 setProductStock appelé pour $productId avec nouvelle valeur: $newStock');
+      
+      // Récupérer le produit actuel
+      final product = await _db
+          .from(_table)
+          .select('est_stockable')
+          .eq('id', productId)
+          .single();
+
+      if (product == null) {
+        throw 'Produit non trouvé';
+      }
+
+      final isStockable = product['est_stockable'] as bool? ?? false;
+      
+      debugPrint('📦 Produit $productId - est stockable: $isStockable');
+
+      // Ne mettre à jour que si le produit est stockable
+      if (!isStockable) {
+        debugPrint('📦 Produit $productId non stockable, pas de mise à jour');
+        throw 'Le produit n\'est pas stockable';
+      }
+
+      // S'assurer que le stock ne devienne pas négatif
+      final finalStock = newStock < 0 ? 0 : newStock;
+      
+      debugPrint('📦 Produit $productId - nouveau stock: $finalStock');
+
+      final response = await _db
+          .from(_table)
+          .update({'quantite_stock': finalStock})
+          .eq('id', productId)
+          .select();
+      
+      debugPrint('📦 Stock mis à jour avec succès pour $productId. Réponse: $response');
+    } on PostgrestException catch (e) {
+      debugPrint('❌ Erreur Postgres lors de la mise à jour du stock: ${e.code} - ${e.message}');
+      throw 'Erreur base de données : ${e.code} - ${e.message}';
+    } catch (e, stackTrace) {
+      debugPrint('❌ Erreur lors de la mise à jour du stock: $e');
+      debugPrint('Stack trace: $stackTrace');
+      rethrow;
+    }
+  }
+
+  /// Mettre à jour le stock d'un produit (changement relatif)
+  Future<void> updateProductStock(String productId, int quantityChange) async {
+    try {
+      debugPrint('📦 updateProductStock appelé pour $productId avec changement: $quantityChange');
+      
+      // Récupérer le produit actuel
+      final product = await _db
+          .from(_table)
+          .select('quantite_stock, est_stockable')
+          .eq('id', productId)
+          .single();
+
+      if (product == null) {
+        throw 'Produit non trouvé';
+      }
+
+      final currentStock = product['quantite_stock'] as int? ?? 0;
+      final isStockable = product['est_stockable'] as bool? ?? false;
+      
+      debugPrint('📦 Produit $productId - stock actuel: $currentStock, est stockable: $isStockable');
+
+      // Ne mettre à jour que si le produit est stockable
+      if (!isStockable) {
+        debugPrint('📦 Produit $productId non stockable, pas de mise à jour');
+        return; // Produit non stockable, pas besoin de mettre à jour
+      }
+
+      final newStock = currentStock + quantityChange;
+      
+      // S'assurer que le stock ne devienne pas négatif
+      final finalStock = newStock < 0 ? 0 : newStock;
+      
+      debugPrint('📦 Produit $productId - nouveau stock: $finalStock (ancien: $currentStock, changement: $quantityChange)');
+
+      final response = await _db
+          .from(_table)
+          .update({'quantite_stock': finalStock})
+          .eq('id', productId)
+          .select();
+      
+      debugPrint('📦 Stock mis à jour avec succès pour $productId. Réponse: $response');
+    } on PostgrestException catch (e) {
+      debugPrint('❌ Erreur Postgres lors de la mise à jour du stock: ${e.code} - ${e.message}');
+      throw 'Erreur base de données : ${e.code} - ${e.message}';
+    } catch (e, stackTrace) {
+      debugPrint('❌ Erreur lors de la mise à jour du stock: $e');
+      debugPrint('Stack trace: $stackTrace');
+      throw 'Erreur lors de la mise à jour du stock : $e';
     }
   }
 

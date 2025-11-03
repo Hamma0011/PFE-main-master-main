@@ -843,6 +843,7 @@ class _ListProduitScreenState extends State<ListProduitScreen> {
   void _showModifierStockDialog(ProduitModel produit) {
     final quantiteController =
         TextEditingController(text: produit.stockQuantity.toString());
+    final formKey = GlobalKey<FormState>();
 
     showDialog(
       context: context,
@@ -852,21 +853,38 @@ class _ListProduitScreenState extends State<ListProduitScreen> {
             borderRadius: BorderRadius.circular(16),
           ),
           title: const Text("Modifier le stock"),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text("Produit: ${produit.name}"),
-              const SizedBox(height: 16),
-              TextFormField(
-                controller: quantiteController,
-                decoration: const InputDecoration(
-                  labelText: 'Nouvelle quantité en stock',
-                  border: OutlineInputBorder(),
+          content: Form(
+            key: formKey,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text("Produit: ${produit.name}"),
+                const SizedBox(height: 16),
+                TextFormField(
+                  controller: quantiteController,
+                  decoration: const InputDecoration(
+                    labelText: 'Nouvelle quantité en stock',
+                    border: OutlineInputBorder(),
+                    hintText: 'Entrez la quantité',
+                  ),
+                  keyboardType: TextInputType.numberWithOptions(decimal: false, signed: false),
+                  validator: (value) {
+                    if (value == null || value.isEmpty) {
+                      return 'Veuillez entrer une quantité';
+                    }
+                    final quantity = int.tryParse(value);
+                    if (quantity == null) {
+                      return 'Veuillez entrer un nombre valide';
+                    }
+                    if (quantity < 0) {
+                      return 'La quantité ne peut pas être négative';
+                    }
+                    return null;
+                  },
                 ),
-                keyboardType: TextInputType.number,
-              ),
-            ],
+              ],
+            ),
           ),
           actions: [
             TextButton(
@@ -875,13 +893,38 @@ class _ListProduitScreenState extends State<ListProduitScreen> {
             ),
             ElevatedButton(
               onPressed: () async {
+                if (!formKey.currentState!.validate()) {
+                  return;
+                }
+
+                final newStock = int.tryParse(quantiteController.text);
+                if (newStock == null) {
+                  TLoaders.errorSnackBar(message: 'Veuillez entrer un nombre valide');
+                  return;
+                }
+
+                if (newStock < 0) {
+                  TLoaders.errorSnackBar(message: 'La quantité ne peut pas être négative');
+                  return;
+                }
+
                 Navigator.pop(context);
-                Get.snackbar(
-                  'Info',
-                  'Fonctionnalité à implémenter',
-                  backgroundColor: Colors.orange,
+
+                // Mettre à jour le stock
+                final success = await controller.updateProductStockQuantity(
+                  produit.id,
+                  newStock,
                 );
+
+                if (success) {
+                  // Recharger les produits pour mettre à jour l'affichage
+                  await _loadProducts();
+                }
               },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.orange,
+                foregroundColor: Colors.white,
+              ),
               child: const Text('Valider'),
             ),
           ],
