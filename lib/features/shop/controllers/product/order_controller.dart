@@ -330,64 +330,176 @@ class OrderController extends GetxController {
         return;
       }
 
-      final order = OrderModel(
-        id: '', // Let database generate UUID
-        userId: user.id,
-        etablissementId: etablissementId,
-        status: OrderStatus.pending,
-        totalAmount: totalAmount,
-        orderDate: DateTime.now(),
-        paymentMethod: checkoutController.selectedPaymentMethod.value.name,
-        address: selectedAddress,
-        deliveryDate: null, // Should be null initially
-        items: cartController.cartItems.toList(),
-        pickupDateTime: pickupDateTime,
-        pickupDay: pickupDay,
-        pickupTimeRange: pickupTimeRange,
-        createdAt: DateTime.now(),
-        updatedAt: DateTime.now(),
-      );
-      print(order);
-      
-      // Diminuer le stock des produits stockables commandés AVANT de sauvegarder la commande
-      try {
-        debugPrint('🔄 Début de la mise à jour du stock avant sauvegarde de la commande');
-        await _decreaseStockForOrder(order.items);
-        debugPrint('✅ Stock mis à jour avec succès');
-      } catch (e, stackTrace) {
-        debugPrint('❌ Erreur lors de la mise à jour du stock: $e');
-        debugPrint('Stack trace: $stackTrace');
-        TFullScreenLoader.stopLoading();
-        TLoaders.errorSnackBar(
-          title: 'Erreur de stock',
-          message: 'Erreur lors de la mise à jour du stock: $e',
+      // Vérifier si on modifie une commande existante
+      final editingOrderId = cartController.editingOrderId.value;
+      if (editingOrderId.isNotEmpty) {
+        // Mettre à jour la commande existante
+        await updateExistingOrder(
+          orderId: editingOrderId,
+          newItems: cartController.cartItems.toList(),
+          totalAmount: totalAmount,
+          pickupDay: pickupDay ?? '',
+          pickupTimeRange: pickupTimeRange ?? '',
+          pickupDateTime: pickupDateTime ?? DateTime.now(),
         );
-        return; // Ne pas continuer si la mise à jour du stock échoue
-      }
-      
-      await orderRepository.saveOrder(order, user.id);
+      } else {
+        // Créer une nouvelle commande
+        final order = OrderModel(
+          id: '', // Let database generate UUID
+          userId: user.id,
+          etablissementId: etablissementId,
+          status: OrderStatus.pending,
+          totalAmount: totalAmount,
+          orderDate: DateTime.now(),
+          paymentMethod: checkoutController.selectedPaymentMethod.value.name,
+          address: selectedAddress,
+          deliveryDate: null, // Should be null initially
+          items: cartController.cartItems.toList(),
+          pickupDateTime: pickupDateTime,
+          pickupDay: pickupDay,
+          pickupTimeRange: pickupTimeRange,
+          createdAt: DateTime.now(),
+          updatedAt: DateTime.now(),
+        );
+        print(order);
+        
+        // Diminuer le stock des produits stockables commandés AVANT de sauvegarder la commande
+        try {
+          debugPrint('🔄 Début de la mise à jour du stock avant sauvegarde de la commande');
+          await _decreaseStockForOrder(order.items);
+          debugPrint('✅ Stock mis à jour avec succès');
+        } catch (e, stackTrace) {
+          debugPrint('❌ Erreur lors de la mise à jour du stock: $e');
+          debugPrint('Stack trace: $stackTrace');
+          TFullScreenLoader.stopLoading();
+          TLoaders.errorSnackBar(
+            title: 'Erreur de stock',
+            message: 'Erreur lors de la mise à jour du stock: $e',
+          );
+          return; // Ne pas continuer si la mise à jour du stock échoue
+        }
+        
+        await orderRepository.saveOrder(order, user.id);
 
-      // Envoyer une notification au gérant de l'établissement
-      try {
-        await _notifyGerantOfNewOrder(etablissementId, order);
-      } catch (e) {
-        debugPrint('Erreur lors de l\'envoi de la notification au gérant: $e');
-        // Ne pas bloquer le processus si la notification échoue
+        // Envoyer une notification au gérant de l'établissement
+        try {
+          await _notifyGerantOfNewOrder(etablissementId, order);
+        } catch (e) {
+          debugPrint('Erreur lors de l\'envoi de la notification au gérant: $e');
+          // Ne pas bloquer le processus si la notification échoue
+        }
       }
 
       cartController.clearCart();
       TFullScreenLoader.stopLoading();
 
+      final isEditing = cartController.editingOrderId.value.isNotEmpty;
       Get.offAll(() => SuccessScreen(
           image: TImages.orderCompletedAnimation,
-          title: 'Produit(s) commandé(s) !',
-          subTitle: 'Votre commande est en cours de traitement',
+          title: isEditing ? 'Commande modifiée !' : 'Produit(s) commandé(s) !',
+          subTitle: isEditing 
+              ? 'Votre commande a été modifiée avec succès'
+              : 'Votre commande est en cours de traitement',
           onPressed: () => Get.offAll(() => const NavigationMenu())));
     } catch (e, st) {
       TFullScreenLoader.stopLoading();
       print(st);
 
       TLoaders.warningSnackBar(title: 'Erreur', message: e.toString());
+    }
+  }
+
+  /// Mettre à jour une commande existante
+  Future<void> updateExistingOrder({
+    required String orderId,
+    required List<CartItemModel> newItems,
+    required double totalAmount,
+    required String pickupDay,
+    required String pickupTimeRange,
+    required DateTime pickupDateTime,
+  }) async {
+    try {
+      final orderIndex = orders.indexWhere((o) => o.id == orderId);
+      if (orderIndex == -1) {
+        throw 'Commande non trouvée';
+      }
+
+      final order = orders[orderIndex];
+
+      // Vérifier que la commande peut être modifiée (seulement en attente)
+      if (order.status != OrderStatus.pending) {
+        throw 'Seules les commandes en attente peuvent être modifiées.';
+      }
+
+      // 1. Restaurer le stock des anciens articles
+      try {
+        debugPrint('🔄 Restauration du stock pour les anciens articles');
+        await _increaseStockForOrder(order.items);
+        debugPrint('✅ Stock restauré avec succès');
+      } catch (e, stackTrace) {
+        debugPrint('❌ Erreur lors de la restauration du stock: $e');
+        debugPrint('Stack trace: $stackTrace');
+      }
+
+      // 2. Diminuer le stock des nouveaux articles
+      try {
+        debugPrint('🔄 Mise à jour du stock pour les nouveaux articles');
+        await _decreaseStockForOrder(newItems);
+        debugPrint('✅ Stock mis à jour avec succès');
+      } catch (e, stackTrace) {
+        debugPrint('❌ Erreur lors de la mise à jour du stock: $e');
+        debugPrint('Stack trace: $stackTrace');
+        // Restaurer le stock précédent en cas d'erreur
+        try {
+          await _increaseStockForOrder(order.items);
+        } catch (_) {
+          // Si cela échoue aussi, on continue quand même
+        }
+        throw 'Erreur lors de la mise à jour du stock';
+      }
+
+      // 3. Préparer les données de mise à jour
+      final updates = {
+        'items': newItems.map((item) => item.toJson()).toList(),
+        'total_amount': totalAmount,
+        'pickup_day': pickupDay,
+        'pickup_time_range': pickupTimeRange,
+        'pickup_date_time': pickupDateTime.toIso8601String(),
+        'updated_at': DateTime.now().toIso8601String(),
+      };
+
+      // 4. Mettre à jour dans la base de données
+      await orderRepository.updateOrder(orderId, updates);
+
+      // 5. Récupérer l'ID du gérant pour la notification
+      final etablissementResponse = await _db
+          .from('etablissements')
+          .select('id_owner, name')
+          .eq('id', order.etablissementId)
+          .maybeSingle();
+
+      if (etablissementResponse != null) {
+        final gerantId = etablissementResponse['id_owner']?.toString() ?? '';
+        if (gerantId.isNotEmpty) {
+          // Notifier le gérant
+          await _db.from('notifications').insert({
+            'user_id': gerantId,
+            'title': 'Commande modifiée',
+            'message':
+                'Le client a modifié la commande #${orderId.substring(0, 8)}. Nouveau total: ${totalAmount.toStringAsFixed(2)} DT',
+            'read': false,
+            'etablissement_id': order.etablissementId,
+            'receiver_role': 'gérant',
+            'created_at': DateTime.now().toIso8601String(),
+          });
+        }
+      }
+
+      // 6. Recharger les commandes
+      await fetchUserOrders();
+    } catch (e) {
+      debugPrint('Erreur lors de la mise à jour de la commande: $e');
+      rethrow;
     }
   }
 

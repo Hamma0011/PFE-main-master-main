@@ -20,6 +20,9 @@ class CartController extends GetxController {
   RxDouble totalCartPrice = 0.0.obs;
   final RxMap<String, int> tempQuantityMap = <String, int>{}.obs;
   RxList<CartItemModel> cartItems = <CartItemModel>[].obs;
+  
+  // ID de la commande en cours de modification (null si nouvelle commande)
+  final RxString editingOrderId = ''.obs;
 
   // Get VariationController from GetX dependency injection
   VariationController get variationController =>
@@ -388,8 +391,20 @@ class CartController extends GetxController {
   void clearCart() {
     tempQuantityMap.clear();
     cartItems.clear();
+    editingOrderId.value = '';
     updateCart();
   }
+
+  /// Charger les articles d'une commande dans le panier pour modification
+  void loadOrderItemsToCart(List<CartItemModel> orderItems, String orderId) {
+    clearCart();
+    cartItems.addAll(orderItems);
+    editingOrderId.value = orderId;
+    updateCart();
+  }
+
+  /// Vérifier si une commande est en cours de modification
+  bool get isEditingOrder => editingOrderId.value.isNotEmpty;
 
   bool canProceedToCheckout() {
     if (cartItems.isEmpty) return false;

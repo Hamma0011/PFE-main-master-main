@@ -41,8 +41,13 @@ class HoraireRepository {
 
   // Récupérer les horaires d'un établissement - CORRIGÉE
   Future<List<Horaire>> getHorairesByEtablissement(
-      String etablissementId) async {
+String etablissementId) async {
     try {
+      // Vérifier que l'ID de l'établissement n'est pas vide
+      if (etablissementId.isEmpty) {
+        throw Exception('L\'ID de l\'établissement ne peut pas être vide');
+      }
+
       final response = await supabase
           .from('horaires')
           .select()

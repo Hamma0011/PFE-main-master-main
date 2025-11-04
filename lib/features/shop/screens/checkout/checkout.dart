@@ -191,7 +191,66 @@ class CheckoutScreen extends StatelessWidget {
           id: firstItem.productId,
           name: firstItem.title,
           imageUrl: firstItem.image ?? '',
+          etablissementId: firstItem.etablissementId,
         );
+
+    // Vérifier que l'établissement est défini
+    if (product.etablissementId.isEmpty) {
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                "Créneau de retrait",
+                style: TextStyle(
+                  fontWeight: FontWeight.w600,
+                  color: Colors.grey.shade600,
+                ),
+              ),
+              TextButton(
+                onPressed: () => TLoaders.warningSnackBar(
+                  title: 'Erreur',
+                  message: 'L\'établissement n\'est pas défini pour ce produit.',
+                ),
+                child: const Text(
+                  "Choisir un créneau",
+                  style: TextStyle(
+                    color: Colors.blue,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: Colors.red.shade50,
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(color: Colors.red.shade200),
+            ),
+            child: Row(
+              children: [
+                Icon(Icons.error, color: Colors.red.shade600, size: 20),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    "Erreur: établissement non défini",
+                    style: TextStyle(
+                      color: Colors.red.shade800,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      );
+    }
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -285,7 +344,17 @@ class CheckoutScreen extends StatelessWidget {
                       id: firstItem.productId,
                       name: firstItem.title,
                       imageUrl: firstItem.image ?? '',
+                      etablissementId: firstItem.etablissementId,
                     );
+
+                // Vérifier que l'établissement est défini
+                if (product.etablissementId.isEmpty) {
+                  TLoaders.warningSnackBar(
+                    title: 'Erreur',
+                    message: 'L\'établissement n\'est pas défini pour ce produit.',
+                  );
+                  return;
+                }
 
                 await TimeSlotModal()
                     .openTimeSlotModal(Get.context!, dark, product);

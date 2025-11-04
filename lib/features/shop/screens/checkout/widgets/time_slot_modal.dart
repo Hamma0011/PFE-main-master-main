@@ -27,6 +27,17 @@ class TimeSlotModal {
       horaireController = Get.put(HoraireController(HoraireRepository()), tag: null);
     }
 
+    // Vérifier que l'ID de l'établissement est valide
+    if (product.etablissementId.isEmpty) {
+      Get.snackbar(
+        "Erreur",
+        "L'établissement n'est pas défini pour ce produit.",
+        backgroundColor: Colors.redAccent,
+        colorText: Colors.white,
+      );
+      return;
+    }
+
     // Charger les horaires
     final horairesResult = await horaireController.fetchHoraires(product.etablissementId);
 
