@@ -43,6 +43,11 @@ class NotificationController extends GetxController {
     }
   }
 
+  /// Exposer la méthode pour le rafraîchissement
+  Future<void> refreshNotifications() async {
+    await _loadNotifications();
+  }
+
   void _subscribeRealtime() {
     _channel = supabase.channel('public:notifications');
     _channel!.onPostgresChanges(
@@ -94,6 +99,33 @@ class NotificationController extends GetxController {
       // Navigate directly to MonEtablissementScreen
       Get.to(() => MonEtablissementScreen(),
           arguments: {'etablissementId': n.etablissementId});
+    }
+  }
+
+  /// Marquer toutes les notifications comme lues
+  Future<void> markAllAsRead() async {
+    try {
+      final unreadIds = notifications
+          .where((n) => !n.read)
+          .map((n) => n.id)
+          .toList();
+
+      if (unreadIds.isEmpty) return;
+
+      await supabase
+          .from('notifications')
+          .update({'read': true})
+          .inFilter('id', unreadIds);
+
+      // Mettre à jour localement
+      for (var i = 0; i < notifications.length; i++) {
+        if (!notifications[i].read) {
+          notifications[i] = notifications[i].copyWith(read: true);
+        }
+      }
+      notifications.refresh();
+    } catch (e) {
+      debugPrint('Error marking all notifications as read: $e');
     }
   }
 }

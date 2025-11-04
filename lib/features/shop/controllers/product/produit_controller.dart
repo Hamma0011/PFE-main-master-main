@@ -172,17 +172,18 @@ class ProduitController extends GetxController {
     try {
       isLoading.value = true;
       final productsList = await produitRepository.getAllProducts();
-      
+
       // Charger l'établissement pour chaque produit si manquant
       final productsWithEtab = await Future.wait(
         productsList.map((produit) async {
-          if (produit.etablissement == null && produit.etablissementId.isNotEmpty) {
+          if (produit.etablissement == null &&
+              produit.etablissementId.isNotEmpty) {
             return await _loadEtablissementForProduct(produit);
           }
           return produit;
         }),
       );
-      
+
       allProducts.assignAll(productsWithEtab);
       filteredProducts.assignAll(productsWithEtab);
     } catch (e) {
@@ -196,19 +197,20 @@ class ProduitController extends GetxController {
   Future<List<ProduitModel>> fetchProductsByEtablissement(
       String etablissementId) async {
     try {
-      final products = await produitRepository
-          .getProductsByEtablissement(etablissementId);
-      
+      final products =
+          await produitRepository.getProductsByEtablissement(etablissementId);
+
       // Charger l'établissement pour chaque produit si manquant
       final productsWithEtab = await Future.wait(
         products.map((produit) async {
-          if (produit.etablissement == null && produit.etablissementId.isNotEmpty) {
+          if (produit.etablissement == null &&
+              produit.etablissementId.isNotEmpty) {
             return await _loadEtablissementForProduct(produit);
           }
           return produit;
         }),
       );
-      
+
       return productsWithEtab;
     } catch (e) {
       TLoaders.errorSnackBar(message: 'Erreur: $e');
@@ -299,6 +301,20 @@ class ProduitController extends GetxController {
 
     try {
       isLoading.value = true;
+      
+      // Si l'utilisateur est Admin, préserver l'établissement original du produit
+      final userRole = userController.user.value.role;
+      if (userRole == 'Admin') {
+        // Récupérer le produit original depuis la base de données
+        final originalProduct = await produitRepository.getProductById(produit.id);
+        if (originalProduct != null) {
+          // Préserver l'établissement original
+          produit = produit.copyWith(
+            etablissementId: originalProduct.etablissementId,
+          );
+        }
+      }
+      
       await produitRepository.updateProduct(produit);
       await loadProductsByRole();
       Get.back(result: true);
@@ -320,21 +336,23 @@ class ProduitController extends GetxController {
       isLoading.value = true;
 
       // Fetch most ordered products instead of featured products (top 10 des 30 derniers jours)
-      final products = await produitRepository.getMostOrderedProductsWithDetails(
+      final products =
+          await produitRepository.getMostOrderedProductsWithDetails(
         days: 30,
         limit: 10,
       );
-      
+
       // Charger l'établissement pour chaque produit si manquant
       final productsWithEtab = await Future.wait(
         products.map((produit) async {
-          if (produit.etablissement == null && produit.etablissementId.isNotEmpty) {
+          if (produit.etablissement == null &&
+              produit.etablissementId.isNotEmpty) {
             return await _loadEtablissementForProduct(produit);
           }
           return produit;
         }),
       );
-      
+
       // Assign products
       featuredProducts.assignAll(productsWithEtab);
     } catch (e) {
@@ -366,7 +384,8 @@ class ProduitController extends GetxController {
   }
 
   /// Mettre à jour le stock d'un produit à une valeur absolue
-  Future<bool> updateProductStockQuantity(String productId, int newStock) async {
+  Future<bool> updateProductStockQuantity(
+      String productId, int newStock) async {
     if (!_hasProductManagementPermission()) {
       TLoaders.errorSnackBar(
           message: "Vous n'avez pas la permission de modifier le stock.");
@@ -380,7 +399,8 @@ class ProduitController extends GetxController {
       TLoaders.successSnackBar(message: 'Stock mis à jour avec succès');
       return true;
     } catch (e) {
-      TLoaders.errorSnackBar(message: "Erreur lors de la mise à jour du stock: $e");
+      TLoaders.errorSnackBar(
+          message: "Erreur lors de la mise à jour du stock: $e");
       return false;
     } finally {
       isLoading.value = false;
@@ -412,7 +432,8 @@ class ProduitController extends GetxController {
   }
 
   /// Charger l'établissement pour un produit si manquant
-  Future<ProduitModel> _loadEtablissementForProduct(ProduitModel produit) async {
+  Future<ProduitModel> _loadEtablissementForProduct(
+      ProduitModel produit) async {
     if (produit.etablissement != null || produit.etablissementId.isEmpty) {
       return produit;
     }
@@ -451,7 +472,8 @@ class ProduitController extends GetxController {
           if (eventType == PostgresChangeEvent.insert) {
             var produit = ProduitModel.fromMap(newData);
             // Charger l'établissement si manquant
-            if (produit.etablissement == null && produit.etablissementId.isNotEmpty) {
+            if (produit.etablissement == null &&
+                produit.etablissementId.isNotEmpty) {
               produit = await _loadEtablissementForProduct(produit);
             }
             final index = allProducts.indexWhere((p) => p.id == produit.id);
@@ -465,7 +487,8 @@ class ProduitController extends GetxController {
           } else if (eventType == PostgresChangeEvent.update) {
             var produit = ProduitModel.fromMap(newData);
             // Charger l'établissement si manquant
-            if (produit.etablissement == null && produit.etablissementId.isNotEmpty) {
+            if (produit.etablissement == null &&
+                produit.etablissementId.isNotEmpty) {
               produit = await _loadEtablissementForProduct(produit);
             }
             final index = allProducts.indexWhere((p) => p.id == produit.id);
@@ -513,11 +536,13 @@ class ProduitController extends GetxController {
           if (eventType == PostgresChangeEvent.insert) {
             var produit = ProduitModel.fromMap(newData);
             // Charger l'établissement si manquant
-            if (produit.etablissement == null && produit.etablissementId.isNotEmpty) {
+            if (produit.etablissement == null &&
+                produit.etablissementId.isNotEmpty) {
               produit = await _loadEtablissementForProduct(produit);
             }
             if (produit.isFeatured == true) {
-              final index = featuredProducts.indexWhere((p) => p.id == produit.id);
+              final index =
+                  featuredProducts.indexWhere((p) => p.id == produit.id);
               if (index == -1) {
                 featuredProducts.insert(0, produit);
               } else {
@@ -528,10 +553,12 @@ class ProduitController extends GetxController {
           } else if (eventType == PostgresChangeEvent.update) {
             var produit = ProduitModel.fromMap(newData);
             // Charger l'établissement si manquant
-            if (produit.etablissement == null && produit.etablissementId.isNotEmpty) {
+            if (produit.etablissement == null &&
+                produit.etablissementId.isNotEmpty) {
               produit = await _loadEtablissementForProduct(produit);
             }
-            final index = featuredProducts.indexWhere((p) => p.id == produit.id);
+            final index =
+                featuredProducts.indexWhere((p) => p.id == produit.id);
             if (produit.isFeatured == true) {
               if (index != -1) {
                 featuredProducts[index] = produit;
@@ -552,7 +579,8 @@ class ProduitController extends GetxController {
             }
           }
         } catch (e) {
-          debugPrint('Erreur traitement changement produit featured temps réel: $e');
+          debugPrint(
+              'Erreur traitement changement produit featured temps réel: $e');
         }
       },
     );
@@ -597,7 +625,8 @@ class ProduitController extends GetxController {
   Future<List<ProduitModel>> fetchAllFeaturedProducts() async {
     try {
       // Fetch most ordered products instead of featured products (limite plus élevée pour la page "Tous les produits")
-      final products = await produitRepository.getMostOrderedProductsWithDetails(
+      final products =
+          await produitRepository.getMostOrderedProductsWithDetails(
         days: 30,
         limit: 100, // Limite plus élevée pour la page "Tous les produits"
       );

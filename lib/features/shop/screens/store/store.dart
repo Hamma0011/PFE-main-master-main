@@ -14,13 +14,29 @@ import '../../../../common/widgets/appbar/appbar.dart';
 import '../../../../utils/constants/colors.dart';
 import '../../models/statut_etablissement_model.dart';
 
-class StoreScreen extends StatelessWidget {
+class StoreScreen extends StatefulWidget {
   const StoreScreen({super.key});
 
   @override
-  Widget build(BuildContext context) {
-    final etablissementController = EtablissementController.instance;
+  State<StoreScreen> createState() => _StoreScreenState();
+}
 
+class _StoreScreenState extends State<StoreScreen> {
+  final etablissementController = EtablissementController.instance;
+
+  @override
+  void initState() {
+    super.initState();
+    // S'assurer de charger tous les établissements au chargement de la page Store
+    // pour afficher tous les établissements approuvés, peu importe le rôle
+    // La page Store doit toujours afficher TOUS les établissements approuvés
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      etablissementController.getTousEtablissements();
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
     return Scaffold(
       appBar: TAppBar(
         showBackArrow: false,

@@ -544,8 +544,26 @@ class _AddProduitScreenState extends State<AddProduitScreen>
     if (!_formKey.currentState!.validate()) return;
     setState(() => _isLoading = true);
 
-    final etabId = await _getEtablissementIdUtilisateur();
-    if (etabId == null) {
+    final userRole = UserController.instance.userRole;
+    String? etabId;
+    
+    // Si on modifie un produit et que l'utilisateur est Admin,
+    // on préserve l'établissement original du produit
+    if (_isEditing && userRole == 'Admin' && widget.produit != null) {
+      etabId = widget.produit!.etablissementId;
+    } else {
+      // Sinon, on récupère l'établissement de l'utilisateur
+      etabId = await _getEtablissementIdUtilisateur();
+      if (etabId == null && userRole != 'Admin') {
+        setState(() => _isLoading = false);
+        return;
+      }
+    }
+
+    // Pour les Admins en création, on doit avoir un établissement
+    if (!_isEditing && etabId == null) {
+      TLoaders.errorSnackBar(
+          message: 'Veuillez sélectionner un établissement pour ce produit.');
       setState(() => _isLoading = false);
       return;
     }
@@ -567,7 +585,7 @@ class _AddProduitScreenState extends State<AddProduitScreen>
       supplements: _supplements,
       description: _descriptionController.text.trim(),
       preparationTime: int.tryParse(_tempsPreparationController.text) ?? 0,
-      etablissementId: etabId,
+      etablissementId: etabId ?? '',
       isStockable: _estStockable,
       stockQuantity:
           _estStockable ? int.tryParse(_quantiteStockController.text) ?? 0 : 0,
