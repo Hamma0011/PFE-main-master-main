@@ -64,10 +64,12 @@ class BrandCard extends StatelessWidget {
                   // Nombre de Produits
                   LayoutBuilder(
                     builder: (context, constraints) {
+                      final nbProduits = brand.nbProduits ?? 0;
+                      final nbProduitsInt = nbProduits.toInt();
                       return SizedBox(
                         width: constraints.maxWidth,
                         child: Text(
-                          '${brand.nbProduits ?? 0} produits',
+                          '$nbProduitsInt produits',
                           style: Theme.of(context).textTheme.labelMedium,
                           overflow: TextOverflow.ellipsis,
                           maxLines: 1,

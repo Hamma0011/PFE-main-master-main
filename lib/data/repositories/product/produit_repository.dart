@@ -445,42 +445,104 @@ class ProduitRepository extends GetxController {
         return [];
       }
       
-      // Récupérer les IDs des produits
-      final productIds = mostOrdered.map((e) => e['productId'] as String).toList();
+      // Récupérer les IDs des produits et filtrer les IDs vides ou invalides
+      final productIds = mostOrdered
+          .map((e) => e['productId']?.toString())
+          .where((id) => id != null && id.isNotEmpty)
+          .cast<String>()
+          .toList();
       
-      // Récupérer les détails complets des produits
-      final productsResponse = await _db
-          .from(_table)
-          .select('*, etablissement:etablissement_id(*)')
-          .inFilter('id', productIds);
+      if (productIds.isEmpty) {
+        debugPrint('Aucun ID de produit valide trouvé');
+        return [];
+      }
+      
+      // Récupérer les détails complets des produits avec gestion d'erreur
+      List<dynamic> productsResponse;
+      try {
+        productsResponse = await _db
+            .from(_table)
+            .select('*, etablissement:etablissement_id(*)')
+            .inFilter('id', productIds);
+      } catch (e) {
+        debugPrint('Erreur lors de la requête Supabase pour les produits: $e');
+        // Si inFilter échoue, essayer de récupérer les produits un par un
+        final products = <ProduitModel>[];
+        for (final productId in productIds) {
+          try {
+            final productResponse = await _db
+                .from(_table)
+                .select('*, etablissement:etablissement_id(*)')
+                .eq('id', productId)
+                .maybeSingle();
+            if (productResponse != null) {
+              try {
+                products.add(ProduitModel.fromMap(Map<String, dynamic>.from(productResponse)));
+              } catch (parseError) {
+                debugPrint('Erreur lors du parsing du produit $productId: $parseError');
+              }
+            }
+          } catch (singleError) {
+            debugPrint('Erreur lors de la récupération du produit $productId: $singleError');
+            continue;
+          }
+        }
+        if (products.isEmpty) return [];
+        return _sortProductsByQuantity(products, mostOrdered);
+      }
       
       if (productsResponse.isEmpty) {
         return [];
       }
       
-      // Convertir en ProduitModel
-      final products = (productsResponse as List)
-          .map((json) => ProduitModel.fromMap(json as Map<String, dynamic>))
-          .toList();
-      
-      // Créer un map pour retrouver les quantités
-      final quantityMap = <String, int>{};
-      for (final e in mostOrdered) {
-        quantityMap[e['productId'] as String] = e['totalQuantity'] as int;
+      // Convertir en ProduitModel avec gestion d'erreur pour chaque produit
+      final products = <ProduitModel>[];
+      for (final productData in productsResponse) {
+        try {
+          final productMap = Map<String, dynamic>.from(productData);
+          final product = ProduitModel.fromMap(productMap);
+          products.add(product);
+        } catch (e) {
+          debugPrint('Erreur lors de la conversion d\'un produit: $e');
+          // Continuer avec les autres produits même si un échoue
+          continue;
+        }
       }
       
-      // Trier les produits selon l'ordre des quantités (plus commandés en premier)
-      products.sort((a, b) {
-        final qtyA = quantityMap[a.id] ?? 0;
-        final qtyB = quantityMap[b.id] ?? 0;
-        return qtyB.compareTo(qtyA);
-      });
+      if (products.isEmpty) {
+        return [];
+      }
       
-      return products;
+      return _sortProductsByQuantity(products, mostOrdered);
     } catch (e) {
       debugPrint('Erreur lors de la récupération des produits les plus commandés: $e');
-      throw 'Erreur lors de la récupération des produits les plus commandés: $e';
+      // Retourner une liste vide au lieu de lever une exception pour éviter de crasher l'app
+      return [];
     }
+  }
+
+  /// Trier les produits selon l'ordre des quantités
+  List<ProduitModel> _sortProductsByQuantity(
+    List<ProduitModel> products,
+    List<Map<String, dynamic>> mostOrdered,
+  ) {
+    // Créer un map pour retrouver les quantités
+    final quantityMap = <String, int>{};
+    for (final e in mostOrdered) {
+      final productId = e['productId']?.toString();
+      if (productId != null && productId.isNotEmpty) {
+        quantityMap[productId] = (e['totalQuantity'] as num?)?.toInt() ?? 0;
+      }
+    }
+    
+    // Trier les produits selon l'ordre des quantités (plus commandés en premier)
+    products.sort((a, b) {
+      final qtyA = quantityMap[a.id] ?? 0;
+      final qtyB = quantityMap[b.id] ?? 0;
+      return qtyB.compareTo(qtyA);
+    });
+    
+    return products;
   }
 
   // Récupération avec IDs

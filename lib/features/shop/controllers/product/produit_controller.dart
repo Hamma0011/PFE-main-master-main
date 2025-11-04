@@ -342,22 +342,36 @@ class ProduitController extends GetxController {
         limit: 10,
       );
 
-      // Charger l'établissement pour chaque produit si manquant
-      final productsWithEtab = await Future.wait(
-        products.map((produit) async {
+      if (products.isEmpty) {
+        featuredProducts.clear();
+        isLoading.value = false;
+        return;
+      }
+
+      // Charger l'établissement pour chaque produit si manquant avec gestion d'erreur
+      final productsWithEtab = <ProduitModel>[];
+      for (final produit in products) {
+        try {
+          ProduitModel finalProduct = produit;
           if (produit.etablissement == null &&
               produit.etablissementId.isNotEmpty) {
-            return await _loadEtablissementForProduct(produit);
+            finalProduct = await _loadEtablissementForProduct(produit);
           }
-          return produit;
-        }),
-      );
+          productsWithEtab.add(finalProduct);
+        } catch (e) {
+          debugPrint('Erreur lors du chargement de l\'établissement pour le produit ${produit.id}: $e');
+          // Ajouter le produit même si l'établissement n'a pas pu être chargé
+          productsWithEtab.add(produit);
+        }
+      }
 
       // Assign products
       featuredProducts.assignAll(productsWithEtab);
     } catch (e) {
-      // Handle error
-      TLoaders.errorSnackBar(title: 'Erreur!', message: e.toString());
+      debugPrint('Erreur lors du chargement des produits populaires: $e');
+      // Ne pas afficher de snackbar pour éviter de spammer l'utilisateur
+      // mais garder une liste vide
+      featuredProducts.clear();
     } finally {
       // Hide loader after loading products
       isLoading.value = false;
@@ -630,10 +644,28 @@ class ProduitController extends GetxController {
         days: 30,
         limit: 100, // Limite plus élevée pour la page "Tous les produits"
       );
-      return products;
+      
+      // Charger l'établissement pour chaque produit si manquant avec gestion d'erreur
+      final productsWithEtab = <ProduitModel>[];
+      for (final produit in products) {
+        try {
+          ProduitModel finalProduct = produit;
+          if (produit.etablissement == null &&
+              produit.etablissementId.isNotEmpty) {
+            finalProduct = await _loadEtablissementForProduct(produit);
+          }
+          productsWithEtab.add(finalProduct);
+        } catch (e) {
+          debugPrint('Erreur lors du chargement de l\'établissement pour le produit ${produit.id}: $e');
+          // Ajouter le produit même si l'établissement n'a pas pu être chargé
+          productsWithEtab.add(produit);
+        }
+      }
+      
+      return productsWithEtab;
     } catch (e) {
-      // Handle error
-      TLoaders.errorSnackBar(title: 'Erreur!', message: e.toString());
+      debugPrint('Erreur lors du chargement de tous les produits populaires: $e');
+      // Ne pas afficher de snackbar pour éviter de spammer l'utilisateur
       return [];
     }
   }
@@ -647,7 +679,12 @@ class ProduitController extends GetxController {
   }
 
   /// -- check product stock status
-  String getProductStockStatus(int stock) {
+  String getProductStockStatus(int stock, {bool isStockable = true}) {
+    // Si le produit n'est pas stockable, toujours afficher "Disponible"
+    if (!isStockable) {
+      return 'Disponible';
+    }
+    // Si le produit est stockable, vérifier le stock
     return stock > 0 ? 'En Stock' : 'Hors Stock';
   }
 

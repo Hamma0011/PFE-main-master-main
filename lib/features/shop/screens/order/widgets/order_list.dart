@@ -194,7 +194,7 @@ class TOrderListItems extends StatelessWidget {
           _summaryItem(context, Iconsax.shopping_bag, 'Articles',
               '${order.items.length}'),
           _summaryItem(context, Iconsax.shop, 'Établissement',
-              order.etablissement?.name ?? 'LiteWait'),
+              order.establishmentNameFromItems),
         ],
       );
 

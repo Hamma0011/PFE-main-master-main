@@ -29,15 +29,20 @@ class THomeCategories extends StatelessWidget {
           ),
         );
       }
+      // Utiliser featuredCategories s'il y en a, sinon utiliser les premières catégories
+      final categoriesToShow = categoryController.featuredCategories.isNotEmpty
+          ? categoryController.featuredCategories
+          : categoryController.allCategories.take(8).toList();
+
       return SizedBox(
         height: 150,
         child: ListView.builder(
             padding: const EdgeInsets.only(left: 16),
             shrinkWrap: true,
-            itemCount: categoryController.featuredCategories.length,
+            itemCount: categoriesToShow.length,
             scrollDirection: Axis.horizontal,
             itemBuilder: (_, index) {
-              final category = categoryController.allCategories[index];
+              final category = categoriesToShow[index];
               return TVerticalImageText(
                 image: category.image,
                 title: category.name,

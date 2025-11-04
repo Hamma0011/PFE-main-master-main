@@ -81,7 +81,31 @@ class EtablissementRepository {
           .eq('is_featured', true)
           .limit(4)
           .order('created_at', ascending: false);
-      return response.map((json) => Etablissement.fromJson(json)).toList();
+      
+      final etablissements = response
+          .map<Etablissement>((json) => Etablissement.fromJson(json))
+          .toList();
+
+      // Compter les produits pour chaque établissement
+      for (int i = 0; i < etablissements.length; i++) {
+        final etablissement = etablissements[i];
+        if (etablissement.id != null && etablissement.id!.isNotEmpty) {
+          try {
+            final countResponse = await _db
+                .from('produits')
+                .select('id')
+                .eq('etablissement_id', etablissement.id!);
+            
+            final count = (countResponse as List).length;
+            etablissements[i] = etablissement.copyWith(nbProduits: count.toDouble());
+          } catch (e) {
+            // En cas d'erreur, laisser nbProduits à 0
+            print('Erreur comptage produits pour établissement ${etablissement.id}: $e');
+          }
+        }
+      }
+
+      return etablissements;
     } on PostgrestException catch (e) {
       throw 'Database error: ${e.message}';
     } catch (e) {
@@ -89,17 +113,39 @@ class EtablissementRepository {
     }
   }
 
-  // Récupérer tous les établissements
+  // Récupérer tous les établissements avec le nombre de produits
   Future<List<Etablissement>> getAllEtablissements() async {
     try {
+      // Récupérer tous les établissements
       final response = await _db
           .from(_table)
           .select('*, id_owner:users!id_owner(*)') // Jointure explicite
           .order('created_at', ascending: false);
 
-      return response
+      final etablissements = response
           .map<Etablissement>((json) => Etablissement.fromJson(json))
           .toList();
+
+      // Compter les produits pour chaque établissement
+      for (int i = 0; i < etablissements.length; i++) {
+        final etablissement = etablissements[i];
+        if (etablissement.id != null && etablissement.id!.isNotEmpty) {
+          try {
+            final countResponse = await _db
+                .from('produits')
+                .select('id')
+                .eq('etablissement_id', etablissement.id!);
+            
+            final count = (countResponse as List).length;
+            etablissements[i] = etablissement.copyWith(nbProduits: count.toDouble());
+          } catch (e) {
+            // En cas d'erreur, laisser nbProduits à 0 (déjà initialisé)
+            print('Erreur comptage produits pour établissement ${etablissement.id}: $e');
+          }
+        }
+      }
+
+      return etablissements;
     } catch (e, stack) {
       print('Erreur récupération établissements: $e');
       print('Stack: $stack');
@@ -107,7 +153,7 @@ class EtablissementRepository {
     }
   }
 
-  // Récupérer les établissements par propriétaire
+  // Récupérer les établissements par propriétaire avec le nombre de produits
   Future<List<Etablissement>> getEtablissementsByOwner(String ownerId) async {
     try {
       final response = await _db
@@ -116,9 +162,30 @@ class EtablissementRepository {
           .eq('id_owner', ownerId)
           .order('created_at', ascending: false);
 
-      return response
+      final etablissements = response
           .map<Etablissement>((json) => Etablissement.fromJson(json))
           .toList();
+
+      // Compter les produits pour chaque établissement
+      for (int i = 0; i < etablissements.length; i++) {
+        final etablissement = etablissements[i];
+        if (etablissement.id != null && etablissement.id!.isNotEmpty) {
+          try {
+            final countResponse = await _db
+                .from('produits')
+                .select('id')
+                .eq('etablissement_id', etablissement.id!);
+            
+            final count = (countResponse as List).length;
+            etablissements[i] = etablissement.copyWith(nbProduits: count.toDouble());
+          } catch (e) {
+            // En cas d'erreur, laisser nbProduits à 0
+            print('Erreur comptage produits pour établissement ${etablissement.id}: $e');
+          }
+        }
+      }
+
+      return etablissements;
     } catch (e, stack) {
       print('Erreur récupération établissements propriétaire: $e');
       print('Stack: $stack');

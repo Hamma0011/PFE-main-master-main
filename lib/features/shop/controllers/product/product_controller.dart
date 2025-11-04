@@ -38,7 +38,6 @@ class ProductController extends GetxController {
       final products = await produitRepository.getFeaturedProducts();
       // Assign products
       featuredProducts.assignAll(products);
-      print(featuredProducts[0].id);
     } catch (e) {
       // Handle error
       TLoaders.errorSnackBar(title: 'Erreur!', message: e.toString());
@@ -97,7 +96,12 @@ class ProductController extends GetxController {
   }
 
   /// -- check product stock status
-  String getProductStockStatus(int stock) {
+  String getProductStockStatus(int stock, {bool isStockable = true}) {
+    // Si le produit n'est pas stockable, toujours afficher "Disponible"
+    if (!isStockable) {
+      return 'Disponible';
+    }
+    // Si le produit est stockable, vérifier le stock
     return stock > 0 ? 'En Stock' : 'Hors Stock';
   }
 }

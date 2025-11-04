@@ -361,7 +361,6 @@ class OrderController extends GetxController {
           createdAt: DateTime.now(),
           updatedAt: DateTime.now(),
         );
-        print(order);
         
         // Diminuer le stock des produits stockables commandés AVANT de sauvegarder la commande
         try {
@@ -401,9 +400,8 @@ class OrderController extends GetxController {
               ? 'Votre commande a été modifiée avec succès'
               : 'Votre commande est en cours de traitement',
           onPressed: () => Get.offAll(() => const NavigationMenu())));
-    } catch (e, st) {
+    } catch (e) {
       TFullScreenLoader.stopLoading();
-      print(st);
 
       TLoaders.warningSnackBar(title: 'Erreur', message: e.toString());
     }

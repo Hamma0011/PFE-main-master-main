@@ -518,10 +518,28 @@ class _GerantOrderManagementScreenState
           ),
         ),
         Expanded(
-          child: _buildDetailItem(
-            icon: Iconsax.user,
-            label: 'Client',
-            value: '${order.userId.substring(0, 8)}...',
+          child: FutureBuilder<String?>(
+            future: userController.getUserFullName(order.userId),
+            builder: (context, snapshot) {
+              String clientName;
+              if (snapshot.connectionState == ConnectionState.waiting) {
+                clientName = 'Chargement...';
+              } else if (snapshot.hasData &&
+                  snapshot.data != null &&
+                  snapshot.data!.isNotEmpty) {
+                clientName = snapshot.data!;
+              } else {
+                clientName = order.userId.isNotEmpty
+                    ? 'Client #${order.userId.substring(0, 8)}'
+                    : 'Client inconnu';
+              }
+
+              return _buildDetailItem(
+                icon: Iconsax.user,
+                label: 'Client',
+                value: clientName,
+              );
+            },
           ),
         ),
       ],

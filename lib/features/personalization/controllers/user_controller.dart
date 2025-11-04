@@ -149,4 +149,21 @@ class UserController extends GetxController {
       TLoaders.warningSnackBar(title: 'Erreur', message: e.toString());
     }
   }
+
+  /// Récupérer le nom complet d'un utilisateur à partir de son ID
+  /// Retourne "Prénom Nom" ou null si l'utilisateur n'est pas trouvé
+  Future<String?> getUserFullName(String userId) async {
+    try {
+      if (userId.isEmpty) return null;
+      
+      final userData = await userRepository.fetchUserDetails(userId);
+      if (userData != null) {
+        return userData.fullName;
+      }
+      return null;
+    } catch (e) {
+      debugPrint('Erreur lors de la récupération du nom utilisateur: $e');
+      return null;
+    }
+  }
 }

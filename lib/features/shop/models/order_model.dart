@@ -240,6 +240,31 @@ class OrderModel {
   // Get formatted total amount
   String get formattedTotalAmount => '${totalAmount.toStringAsFixed(2)} DT';
 
+  /// Obtenir le nom de l'établissement à partir des produits de la commande
+  /// Retourne le nom de l'établissement le plus fréquent parmi les items
+  String get establishmentNameFromItems {
+    if (items.isEmpty) {
+      return etablissement?.name ?? 'LiteWait';
+    }
+
+    // Compter les occurrences de chaque nom d'établissement
+    final Map<String, int> establishmentCounts = {};
+    for (final item in items) {
+      final name = item.brandName ?? 'Inconnu';
+      establishmentCounts[name] = (establishmentCounts[name] ?? 0) + 1;
+    }
+
+    // Retourner le nom le plus fréquent
+    if (establishmentCounts.isEmpty) {
+      return etablissement?.name ?? 'LiteWait';
+    }
+
+    final mostFrequent = establishmentCounts.entries
+        .reduce((a, b) => a.value > b.value ? a : b);
+    
+    return mostFrequent.key;
+  }
+
   @override
   bool operator ==(Object other) {
     if (identical(this, other)) return true;

@@ -6,12 +6,13 @@ import 'package:flutter_map/flutter_map.dart';
 import 'package:get/get.dart';
 import 'package:http/http.dart' as http;
 import 'package:latlong2/latlong.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../../../utils/constants/colors.dart';
 import '../../../../utils/device/device_utility.dart';
 import '../../models/order_model.dart';
+import '../../models/etablissement_model.dart';
 import 'dart:async';
-
-import 'package:async/async.dart'; // Add this import
+import 'package:async/async.dart';
 
 class DeliveryMapView extends StatefulWidget {
   final OrderModel order;
@@ -23,6 +24,7 @@ class DeliveryMapView extends StatefulWidget {
 
 class _DeliveryMapViewState extends State<DeliveryMapView> {
   final MapController _mapController = MapController();
+  final _db = Supabase.instance.client;
   List<LatLng> routePoints = [];
   String travelTime = "";
   String distanceText = "";
@@ -32,11 +34,73 @@ class _DeliveryMapViewState extends State<DeliveryMapView> {
   CancelableOperation? _currentRequestOperation;
   http.Client? _currentHttpClient;
   Timer? _debounceTimer;
+  Etablissement? _loadedEtablissement;
+  bool _isLoadingEtablissement = false;
 
   @override
   void initState() {
     super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) => _fetchRoute());
+    // Vérifier que l'ordre a les données nécessaires
+    if (widget.order.etablissement == null &&
+        widget.order.etablissementId.isNotEmpty) {
+      // Charger l'établissement depuis Supabase
+      _loadEtablissement();
+    } else if (widget.order.etablissement == null) {
+      debugPrint(
+          'Erreur: établissement null et etablissementId vide dans DeliveryMapView');
+      return;
+    }
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted && !_isDisposed) {
+        _fetchRoute();
+      }
+    });
+  }
+
+  /// Charger l'établissement depuis Supabase si non présent dans l'ordre
+  Future<void> _loadEtablissement() async {
+    if (_isDisposed || !mounted || widget.order.etablissementId.isEmpty) return;
+
+    setState(() {
+      _isLoadingEtablissement = true;
+    });
+
+    try {
+      final response = await _db
+          .from('etablissements')
+          .select('*')
+          .eq('id', widget.order.etablissementId)
+          .maybeSingle();
+
+      if (response != null && mounted && !_isDisposed) {
+        setState(() {
+          _loadedEtablissement = Etablissement.fromJson(response);
+          _isLoadingEtablissement = false;
+        });
+        // Recharger l'itinéraire maintenant que l'établissement est chargé
+        _fetchRoute();
+      } else {
+        if (mounted && !_isDisposed) {
+          setState(() {
+            _isLoadingEtablissement = false;
+          });
+          await _showSnack("Erreur", "Établissement introuvable.");
+        }
+      }
+    } catch (e) {
+      debugPrint('Erreur lors du chargement de l\'établissement: $e');
+      if (mounted && !_isDisposed) {
+        setState(() {
+          _isLoadingEtablissement = false;
+        });
+        await _showSnack("Erreur", "Impossible de charger l'établissement.");
+      }
+    }
+  }
+
+  /// Obtenir l'établissement (depuis l'ordre ou chargé)
+  Etablissement? get _etablissement {
+    return widget.order.etablissement ?? _loadedEtablissement;
   }
 
   @override
@@ -73,6 +137,7 @@ class _DeliveryMapViewState extends State<DeliveryMapView> {
   }
 
   void _fitMapToBounds() {
+    if (!mounted || _isDisposed) return;
     if (_routeBounds != null && _isMapReady) {
       try {
         _mapController.fitCamera(
@@ -117,26 +182,32 @@ class _DeliveryMapViewState extends State<DeliveryMapView> {
   }
 
   void _fitToStartEndPoints() {
+    if (!mounted || _isDisposed) return;
+    final etablissement = _etablissement;
     final clientLat = widget.order.address?.latitude ?? 0.0;
     final clientLng = widget.order.address?.longitude ?? 0.0;
-    final restoLat = widget.order.etablissement?.latitude ?? 0.0;
-    final restoLng = widget.order.etablissement?.longitude ?? 0.0;
+    final restoLat = etablissement?.latitude ?? 0.0;
+    final restoLng = etablissement?.longitude ?? 0.0;
 
     if (clientLat != 0.0 &&
         clientLng != 0.0 &&
         restoLat != 0.0 &&
         restoLng != 0.0) {
-      final points = [
-        LatLng(clientLat, clientLng),
-        LatLng(restoLat, restoLng),
-      ];
-      final bounds = LatLngBounds.fromPoints(points);
-      final center = bounds.center;
-      final distance = Distance();
-      final diagonalDistance = distance(bounds.southWest, bounds.northEast);
-      final zoom = _calculateOptimalZoom(diagonalDistance);
+      try {
+        final points = [
+          LatLng(clientLat, clientLng),
+          LatLng(restoLat, restoLng),
+        ];
+        final bounds = LatLngBounds.fromPoints(points);
+        final center = bounds.center;
+        final distance = Distance();
+        final diagonalDistance = distance(bounds.southWest, bounds.northEast);
+        final zoom = _calculateOptimalZoom(diagonalDistance);
 
-      _mapController.move(center, zoom);
+        _mapController.move(center, zoom);
+      } catch (e) {
+        debugPrint('Error in _fitToStartEndPoints: $e');
+      }
     }
   }
 
@@ -155,10 +226,11 @@ class _DeliveryMapViewState extends State<DeliveryMapView> {
   }
 
   LatLng _calculateCenter() {
+    final etablissement = _etablissement;
     final clientLat = widget.order.address?.latitude ?? 0.0;
     final clientLng = widget.order.address?.longitude ?? 0.0;
-    final restoLat = widget.order.etablissement?.latitude ?? 0.0;
-    final restoLng = widget.order.etablissement?.longitude ?? 0.0;
+    final restoLat = etablissement?.latitude ?? 0.0;
+    final restoLng = etablissement?.longitude ?? 0.0;
 
     if (clientLat != 0.0 &&
         clientLng != 0.0 &&
@@ -214,28 +286,54 @@ class _DeliveryMapViewState extends State<DeliveryMapView> {
   }
 
   Future<void> _executeRouteRequest() async {
-    if (_isDisposed) return;
+    if (_isDisposed || !mounted) return;
 
     final client = http.Client();
     _currentHttpClient = client;
 
     try {
+      final etablissement = _etablissement;
+      if (etablissement == null) {
+        if (!_isDisposed && mounted) {
+          await _showSnack("Erreur", "Établissement non disponible.");
+        }
+        return;
+      }
+
       final clientLat = widget.order.address?.latitude ?? 0.0;
       final clientLng = widget.order.address?.longitude ?? 0.0;
-      final restoLat = widget.order.etablissement?.latitude ?? 0.0;
-      final restoLng = widget.order.etablissement?.longitude ?? 0.0;
+      final restoLat = etablissement.latitude ?? 0.0;
+      final restoLng = etablissement.longitude ?? 0.0;
 
       if (clientLat == 0.0 ||
           clientLng == 0.0 ||
           restoLat == 0.0 ||
           restoLng == 0.0) {
-        await _showSnack("Erreur", "Coordonnées invalides pour la commande.");
+        if (!_isDisposed && mounted) {
+          await _showSnack("Erreur", "Coordonnées invalides pour la commande.");
+        }
         return;
       }
 
-      final apiKey = dotenv.env['GRAPHHOPPER_API_KEY'] ?? '';
+      // Vérifier que dotenv est chargé
+      String apiKey = '';
+      try {
+        apiKey = dotenv.env['GRAPHHOPPER_API_KEY'] ?? '';
+      } catch (e) {
+        debugPrint('Erreur lors de la récupération de la clé API: $e');
+        // Essayer de charger dotenv si ce n'est pas déjà fait
+        try {
+          await dotenv.load();
+          apiKey = dotenv.env['GRAPHHOPPER_API_KEY'] ?? '';
+        } catch (loadError) {
+          debugPrint('Erreur lors du chargement de dotenv: $loadError');
+        }
+      }
+
       if (apiKey.isEmpty) {
-        await _showSnack("Erreur", "Clé API GraphHopper non configurée.");
+        if (!_isDisposed && mounted) {
+          await _showSnack("Erreur", "Clé API GraphHopper non configurée.");
+        }
         return;
       }
 
@@ -251,15 +349,33 @@ class _DeliveryMapViewState extends State<DeliveryMapView> {
         },
       );
 
-      if (_isDisposed) return;
+      if (_isDisposed || !mounted) return;
 
       if (response.statusCode != 200) {
-        throw Exception('Erreur API: ${response.statusCode} ${response.body}');
+        if (!_isDisposed && mounted) {
+          await _showSnack("Erreur", "Erreur API: ${response.statusCode}");
+        }
+        return;
       }
 
-      final data = jsonDecode(response.body) as Map<String, dynamic>;
+      if (_isDisposed || !mounted) return;
+
+      Map<String, dynamic> data;
+      try {
+        data = jsonDecode(response.body) as Map<String, dynamic>;
+      } catch (e) {
+        debugPrint('Erreur lors du parsing JSON: $e');
+        if (!_isDisposed && mounted) {
+          await _showSnack("Erreur", "Réponse invalide de l'API");
+        }
+        return;
+      }
+
       if (data['paths'] == null || (data['paths'] as List).isEmpty) {
-        throw Exception('Aucun chemin retourné par l\'API');
+        if (!_isDisposed && mounted) {
+          await _showSnack("Erreur", "Aucun chemin retourné par l'API");
+        }
+        return;
       }
 
       final path = (data['paths'] as List).first as Map<String, dynamic>;
@@ -273,7 +389,9 @@ class _DeliveryMapViewState extends State<DeliveryMapView> {
           : [];
 
       if (coords.isEmpty) {
-        await _showSnack("Erreur", "Itinéraire introuvable (aucun point).");
+        if (!_isDisposed && mounted) {
+          await _showSnack("Erreur", "Itinéraire introuvable (aucun point).");
+        }
         return;
       }
 
@@ -289,24 +407,34 @@ class _DeliveryMapViewState extends State<DeliveryMapView> {
       }
 
       if (points.isEmpty) {
-        await _showSnack(
-            "Erreur", "Impossible de parser les coordonnées de l'itinéraire.");
+        if (!_isDisposed && mounted) {
+          await _showSnack("Erreur",
+              "Impossible de parser les coordonnées de l'itinéraire.");
+        }
         return;
       }
 
-      if (_isDisposed) return;
+      if (_isDisposed || !mounted) return;
 
-      setState(() {
-        distanceText = "${(distance / 1000).toStringAsFixed(1)} km";
-        travelTime = _formatTravelTime(time);
-        routePoints = points;
-        _routeBounds = LatLngBounds.fromPoints(points);
-      });
+      if (mounted) {
+        setState(() {
+          distanceText = "${(distance / 1000).toStringAsFixed(1)} km";
+          travelTime = _formatTravelTime(time);
+          routePoints = points;
+          _routeBounds = LatLngBounds.fromPoints(points);
+        });
+      }
 
       WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (_isDisposed) return;
+        if (_isDisposed || !mounted) return;
         _fitMapToBounds();
       });
+    } catch (e) {
+      debugPrint('Erreur dans _executeRouteRequest: $e');
+      if (!_isDisposed && mounted) {
+        await _showSnack(
+            "Erreur", "Impossible de récupérer l'itinéraire: ${e.toString()}");
+      }
     } finally {
       client.close();
       if (_currentHttpClient == client) {
@@ -497,6 +625,7 @@ class _DeliveryMapViewState extends State<DeliveryMapView> {
               initialZoom: 10.0,
               keepAlive: true,
               onMapReady: () {
+                if (!mounted || _isDisposed) return;
                 setState(() {
                   _isMapReady = true;
                 });
@@ -524,12 +653,14 @@ class _DeliveryMapViewState extends State<DeliveryMapView> {
                 ),
               MarkerLayer(
                 markers: [
-                  if (widget.order.etablissement?.latitude != 0.0 &&
-                      widget.order.etablissement?.longitude != 0.0)
+                  if (_etablissement?.latitude != null &&
+                      _etablissement?.latitude != 0.0 &&
+                      _etablissement?.longitude != null &&
+                      _etablissement?.longitude != 0.0)
                     Marker(
                       point: LatLng(
-                        widget.order.etablissement!.latitude!,
-                        widget.order.etablissement!.longitude!,
+                        _etablissement!.latitude!,
+                        _etablissement!.longitude!,
                       ),
                       width: isMobile ? 50 : 60,
                       height: isMobile ? 50 : 60,
@@ -597,7 +728,9 @@ class _DeliveryMapViewState extends State<DeliveryMapView> {
           ),
 
           // Loading indicator
-          if (!_isMapReady || (routePoints.isEmpty && travelTime.isEmpty))
+          if (!_isMapReady ||
+              _isLoadingEtablissement ||
+              (routePoints.isEmpty && travelTime.isEmpty))
             Positioned.fill(
               child: Container(
                 color: Colors.black.withOpacity(0.1),
