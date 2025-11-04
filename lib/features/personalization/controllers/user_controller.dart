@@ -32,7 +32,14 @@ class UserController extends GetxController {
   @override
   void onInit() {
     super.onInit();
-    // Listener sur l'état de connexion Supabase
+    
+    // Charger l'utilisateur immédiatement si une session existe déjà
+    final currentSession = Supabase.instance.client.auth.currentSession;
+    if (currentSession != null) {
+      fetchUserRecord();
+    }
+    
+    // Listener sur l'état de connexion Supabase pour les changements futurs
     Supabase.instance.client.auth.onAuthStateChange.listen((data) {
       final session = data.session;
       if (session != null) {
@@ -48,11 +55,25 @@ class UserController extends GetxController {
   Future<void> fetchUserRecord() async {
     try {
       profileLoading.value = true;
-      final user = await userRepository.fetchUserDetails();
-      this.user(user);
+      final userData = await userRepository.fetchUserDetails();
+      
+      if (userData != null) {
+        // Ne mettre à jour que si on a réussi à récupérer les données
+        this.user(userData);
+      } else {
+        // Si l'utilisateur n'existe pas en base, ne pas écraser avec un utilisateur vide
+        // Garder l'utilisateur actuel si disponible
+        debugPrint("Aucune donnée utilisateur trouvée en base de données");
+      }
     } catch (e) {
-      user(UserModel.empty());
-      Get.snackbar('Erreur', 'Impossible de récupérer les données utilisateur');
+      // Ne pas écraser l'utilisateur existant en cas d'erreur
+      // Garder l'utilisateur actuel si disponible
+      debugPrint("Erreur lors du chargement de l'utilisateur: $e");
+      
+      // Seulement afficher un message si l'utilisateur n'était pas déjà chargé
+      if (this.user.value.id.isEmpty) {
+        debugPrint('Impossible de récupérer les données utilisateur');
+      }
     } finally {
       profileLoading.value = false;
     }
