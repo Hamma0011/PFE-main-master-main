@@ -55,6 +55,7 @@ class ChangeName extends StatelessWidget {
                       labelText: 'Nom',
                       hintText: 'Entrez votre nom',
                     ),
+
                   ),
                   const SizedBox(
                     height: AppSizes.spaceBtwInputFields,
@@ -128,3 +129,4 @@ class ChangeName extends StatelessWidget {
     );
   }
 }
+

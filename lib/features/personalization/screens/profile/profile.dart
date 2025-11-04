@@ -32,20 +32,32 @@ class ProfileScreen extends GetView<UserController> {
                   maxScale: 3.0,
                   child: ClipRRect(
                     borderRadius: BorderRadius.circular(16),
-                    child: Image(
-                      image: imageUrl.startsWith('http')
-                          ? NetworkImage(imageUrl)
-                          : AssetImage(imageUrl) as ImageProvider,
-                      fit: BoxFit.contain,
-                      errorBuilder: (context, error, stackTrace) {
-                        return Container(
-                          width: 300,
-                          height: 300,
-                          color: Colors.grey[300],
-                          child: const Icon(Icons.error, size: 50),
-                        );
-                      },
-                    ),
+                    child: imageUrl.startsWith('http://') ||
+                            imageUrl.startsWith('https://')
+                        ? Image.network(
+                            imageUrl,
+                            fit: BoxFit.contain,
+                            errorBuilder: (context, error, stackTrace) {
+                              return Container(
+                                width: 300,
+                                height: 300,
+                                color: Colors.grey[300],
+                                child: const Icon(Icons.error, size: 50),
+                              );
+                            },
+                          )
+                        : Image.asset(
+                            imageUrl,
+                            fit: BoxFit.contain,
+                            errorBuilder: (context, error, stackTrace) {
+                              return Container(
+                                width: 300,
+                                height: 300,
+                                color: Colors.grey[300],
+                                child: const Icon(Icons.error, size: 50),
+                              );
+                            },
+                          ),
                   ),
                 ),
               ),
@@ -97,11 +109,16 @@ class ProfileScreen extends GetView<UserController> {
         final user = controller.user.value;
 
         // Déterminer l'image de profil
-        final profileImage = user.profileImageUrl!.isNotEmpty
-            ? user.profileImageUrl!
-            : user.sex == 'Homme'
-            ? TImages.userMale
-            : TImages.userFemale;
+        final profileImage =
+            (user.profileImageUrl != null && user.profileImageUrl!.isNotEmpty)
+                ? user.profileImageUrl!
+                : user.sex == 'Homme'
+                    ? TImages.userMale
+                    : TImages.userFemale;
+
+        // Déterminer si c'est une image réseau ou un asset
+        final isNetworkImage = profileImage.startsWith('http://') ||
+            profileImage.startsWith('https://');
 
         return SingleChildScrollView(
           child: Padding(
@@ -122,7 +139,7 @@ class ProfileScreen extends GetView<UserController> {
                               _showFullScreenImage(context, profileImage);
                             },
                             child: CircularImage(
-                              isNetworkImage: true,
+                              isNetworkImage: isNetworkImage,
                               image: profileImage,
                               width: 80,
                               height: 80,
@@ -140,7 +157,8 @@ class ProfileScreen extends GetView<UserController> {
                                   source: ImageSource.gallery,
                                 );
                                 if (pickedFile != null) {
-                                  await controller.updateProfileImage(pickedFile);
+                                  await controller
+                                      .updateProfileImage(pickedFile);
                                 }
                               },
                               child: Container(

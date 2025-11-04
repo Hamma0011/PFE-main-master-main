@@ -23,15 +23,23 @@ class TUserProfileTile extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.center,
           children: [
             // Avatar
-            CircularImage(
-              isNetworkImage: true,
-              image: controller.user.value.profileImageUrl?.isNotEmpty == true
-                  ? controller.user.value.profileImageUrl!
-                  : controller.user.value.sex == 'Homme'
-                      ? TImages.userMale
-                      : TImages.userFemale,
-              width: 80,
-              height: 80,
+            Builder(
+              builder: (context) {
+                final user = controller.user.value;
+                final profileImage = (user.profileImageUrl != null && user.profileImageUrl!.isNotEmpty)
+                    ? user.profileImageUrl!
+                    : user.sex == 'Homme'
+                        ? TImages.userMale
+                        : TImages.userFemale;
+                final isNetworkImg = profileImage.startsWith('http://') || 
+                                     profileImage.startsWith('https://');
+                return CircularImage(
+                  isNetworkImage: isNetworkImg,
+                  image: profileImage,
+                  width: 80,
+                  height: 80,
+                );
+              },
             ),
             const SizedBox(width: 16),
 

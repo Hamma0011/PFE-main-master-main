@@ -57,68 +57,55 @@ class TProductAttributes extends StatelessWidget {
             runSpacing: 8,
             children: product.sizesPrices.map((sp) {
               final bool isSelected = selectedSize == sp.size;
-              // Check if this variation is in cart, but exclude current variation if in edit mode
+              // Vérifier si cette variation est dans le panier
               final bool isInCart = variationsInCartSet.contains(sp.size) &&
                   (excludeVariationId == null || sp.size != excludeVariationId);
+              
+              // Obtenir la quantité de cette variation dans le panier
+              final variationQuantity = isInCart
+                  ? cartController.getVariationQuantityInCart(product.id, sp.size)
+                  : 0;
 
               return ChoiceChip(
                 label: Text(
-                  '${sp.size} (${sp.price.toStringAsFixed(2)} DT)${isInCart ? ' ✓' : ''}',
+                  '${sp.size} (${sp.price.toStringAsFixed(2)} DT)${isInCart ? ' ✓ ($variationQuantity)' : ''}',
                   style: TextStyle(
-                    color: isInCart && !isSelected
-                        ? Colors.grey.shade500
-                        : (isSelected
-                            ? Colors.white
-                            : (dark ? Colors.white70 : Colors.black87)),
+                    color: isSelected
+                        ? Colors.white
+                        : (dark ? Colors.white70 : Colors.black87),
                   ),
                 ),
                 selected: isSelected,
                 selectedColor: AppColors.primary,
                 backgroundColor: isInCart && !isSelected
                     ? (dark
-                        ? Colors.grey.shade800.withOpacity(0.5)
-                        : Colors.grey.shade300)
+                        ? Colors.green.shade900.withOpacity(0.3)
+                        : Colors.green.shade50)
                     : (dark ? AppColors.darkerGrey : AppColors.lightGrey),
                 disabledColor: dark
                     ? Colors.grey.shade800.withOpacity(0.5)
                     : Colors.grey.shade300,
-                labelStyle: TextStyle(
-                  decoration: isInCart && !isSelected
-                      ? TextDecoration.lineThrough
-                      : null,
-                ),
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(12),
                 ),
                 avatar: isInCart && !isSelected
-                    ? Icon(Icons.lock, size: 16, color: Colors.grey.shade500)
+                    ? Icon(Icons.check_circle, size: 16, color: Colors.green.shade600)
                     : null,
 
-                /// --- Disable variations already in cart (except current one in edit mode) ---
-                onSelected: isInCart && !isSelected
-                    ? null
-                    : (bool selected) {
-                        // Prevent selecting variations already in cart
-                        if (isInCart) {
-                          Get.snackbar(
-                            'Déjà ajouté',
-                            'Cette variation est déjà dans le panier.',
-                            backgroundColor: Colors.orange.shade100,
-                            colorText: Colors.black87,
-                          );
-                          return;
-                        }
-
-                        // Select or deselect variation
-                        if (selected) {
-                          variationController.selectVariation(sp.size, sp.price);
-                          // When variation changes, ensure temp quantity reflects existing cart quantity
-                          // This is handled automatically by getTempQuantity, which calls getExistingQuantity
-                          // No need to update variation in cart here - we're just selecting, not adding
-                        } else {
-                          variationController.clearVariation();
-                        }
-                      },
+                /// --- Permettre la sélection de plusieurs tailles ---
+                onSelected: (bool selected) {
+                  // Select or deselect variation
+                  if (selected) {
+                    variationController.selectVariation(sp.size, sp.price);
+                    // Si cette variation est déjà dans le panier, on permet quand même de la sélectionner
+                    // pour permettre d'ajouter plus de cette taille ou de la modifier
+                  } else {
+                    // Si on désélectionne, on efface seulement si c'était la taille sélectionnée
+                    if (isSelected) {
+                      variationController.clearVariation();
+                    }
+                  }
+                },
               );
             }).toList(),
           ),

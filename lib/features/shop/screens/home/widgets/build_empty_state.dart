@@ -24,14 +24,6 @@ class BuildEmptyState extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 8),
-          Text(
-            'Les produits en vedette apparaîtront ici',
-            style: TextStyle(
-              fontSize: 14,
-              color: Colors.grey[500],
-            ),
-            textAlign: TextAlign.center,
-          ),
         ],
       ),
     );

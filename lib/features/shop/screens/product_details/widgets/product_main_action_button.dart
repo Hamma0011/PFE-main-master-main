@@ -24,7 +24,22 @@ class ProductMainActionButton extends StatelessWidget {
       if (!Get.isRegistered<CartController>()) {
         return const SizedBox.shrink();
       }
-      final quantity = controller.getProductQuantityInCart(product.id);
+      
+      // Pour les produits variables, vérifier la quantité de la variation sélectionnée
+      // Pour les produits simples, vérifier la quantité totale
+      int quantity;
+      if (product.productType == 'variable') {
+        final variationController = controller.variationController;
+        final selectedSize = variationController.selectedSize.value;
+        if (selectedSize.isNotEmpty) {
+          quantity = controller.getVariationQuantityInCart(product.id, selectedSize);
+        } else {
+          quantity = 0; // Pas de taille sélectionnée = pas dans le panier
+        }
+      } else {
+        quantity = controller.getProductQuantityInCart(product.id);
+      }
+      
       final hasItems = quantity > 0;
 
       return Material(

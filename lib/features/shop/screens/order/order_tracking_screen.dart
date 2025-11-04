@@ -17,7 +17,7 @@ class OrderTrackingScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     final dark = THelperFunctions.isDarkMode(context);
     final backgroundColor = dark ? AppColors.dark : AppColors.light;
-    final cardColor = dark ? Colors.grey[850] : Colors.white;
+    final cardColor = dark ? Colors.grey[850]! : Colors.white;
     final textColor = dark ? Colors.white : Colors.black87;
 
     return Scaffold(
@@ -34,7 +34,7 @@ class OrderTrackingScreen extends StatelessWidget {
             // Order Summary
             TRoundedContainer(
               width: double.infinity,
-              backgroundColor: cardColor!,
+              backgroundColor: cardColor,
               padding: const EdgeInsets.all(AppSizes.md),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -76,7 +76,7 @@ class OrderTrackingScreen extends StatelessWidget {
             // Delivery & Pickup Info
             if (order.pickupDay != null && order.pickupTimeRange != null)
               TRoundedContainer(
-                backgroundColor: cardColor!,
+                backgroundColor: cardColor,
                 padding: const EdgeInsets.all(AppSizes.md),
                 child: Row(
                   children: [
@@ -116,7 +116,7 @@ class OrderTrackingScreen extends StatelessWidget {
 
             // Order Items
             TRoundedContainer(
-              backgroundColor: cardColor!,
+              backgroundColor: cardColor,
               padding: const EdgeInsets.all(AppSizes.md),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -136,15 +136,38 @@ class OrderTrackingScreen extends StatelessWidget {
                     separatorBuilder: (_, __) => const SizedBox(height: 8),
                     itemBuilder: (_, index) {
                       final item = order.items[index];
+                      // Déterminer si l'image est valide (URL réseau ou asset)
+                      final hasValidImage = item.image != null && 
+                                          item.image!.isNotEmpty &&
+                                          (item.image!.startsWith('http://') || 
+                                           item.image!.startsWith('https://') ||
+                                           item.image!.startsWith('assets/'));
+                      
                       return Row(
                         children: [
                           ClipRRect(
                             borderRadius: BorderRadius.circular(8),
-                            child: item.image != null
-                                ? Image.network(item.image!,
-                                    width: 50, height: 50, fit: BoxFit.cover)
-                                : Container(
-                                    width: 50, height: 50, color: Colors.grey),
+                            child: hasValidImage
+                                ? item.image!.startsWith('http://') || item.image!.startsWith('https://')
+                                    ? Image.network(
+                                        item.image!,
+                                        width: 50,
+                                        height: 50,
+                                        fit: BoxFit.cover,
+                                        errorBuilder: (context, error, stackTrace) {
+                                          return _buildPlaceholderImage();
+                                        },
+                                      )
+                                    : Image.asset(
+                                        item.image!,
+                                        width: 50,
+                                        height: 50,
+                                        fit: BoxFit.cover,
+                                        errorBuilder: (context, error, stackTrace) {
+                                          return _buildPlaceholderImage();
+                                        },
+                                      )
+                                : _buildPlaceholderImage(),
                           ),
                           const SizedBox(width: 12),
                           Expanded(
@@ -184,6 +207,17 @@ class OrderTrackingScreen extends StatelessWidget {
               width: double.infinity,
               child: ElevatedButton.icon(
                 onPressed: () {
+                  // Vérifier que l'établissement est disponible avant de naviguer
+                  if (order.etablissement == null && order.etablissementId.isEmpty) {
+                    Get.snackbar(
+                      'Erreur',
+                      'Les données de livraison ne sont pas disponibles',
+                      backgroundColor: Colors.red,
+                      colorText: Colors.white,
+                      snackPosition: SnackPosition.BOTTOM,
+                    );
+                    return;
+                  }
                   Get.to(() => DeliveryMapView(order: order));
                 },
                 icon: const Icon(Icons.map_outlined),
@@ -219,6 +253,23 @@ class OrderTrackingScreen extends StatelessWidget {
             style: TextStyle(
                 fontWeight: FontWeight.bold, fontSize: 14, color: color)),
       ],
+    );
+  }
+
+  // Widget pour l'image placeholder quand l'image est absente
+  Widget _buildPlaceholderImage() {
+    return Container(
+      width: 50,
+      height: 50,
+      decoration: BoxDecoration(
+        color: Colors.grey[300],
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Icon(
+        Icons.shopping_bag,
+        color: Colors.grey[600],
+        size: 24,
+      ),
     );
   }
 }

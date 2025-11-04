@@ -3,6 +3,7 @@ import 'package:get/get.dart';
 
 import '../../../../../features/shop/controllers/product/panier_controller.dart';
 import '../../../../../features/shop/models/produit_model.dart';
+import '../../../../../features/shop/screens/product_details/product_detail.dart';
 import '../../../../../utils/constants/colors.dart';
 
 class ProductCardAddToCartButton extends StatelessWidget {
@@ -133,17 +134,31 @@ class ProductCardAddToCartButton extends StatelessWidget {
   void _handleAddToCart(CartController cartController) {
     // Vérifier si on peut ajouter ce produit
     if (!cartController.canAddProduct(product)) return;
+    
+    // Pour les produits variables, rediriger vers la page de détail pour choisir la taille
+    if (!isSingleProduct) {
+      Get.to(() => ProductDetailScreen(product: product));
+      return;
+    }
+    
+    // Pour les produits simples, ajouter directement au panier
     if (isSingleProduct) {
       final cartItem = cartController.productToCartItem(product, 1);
       cartController.addOneToCart(cartItem);
     }
-    // For non-single products, you might want to show variant selection
-    // or keep the navigation if needed
   }
 
   void _handleIncrement(CartController cartController) {
     // Vérifier si on peut ajouter ce produit
     if (!cartController.canAddProduct(product)) return;
+    
+    // Pour les produits variables, rediriger vers la page de détail pour choisir la taille
+    if (!isSingleProduct) {
+      Get.to(() => ProductDetailScreen(product: product));
+      return;
+    }
+    
+    // Pour les produits simples, ajouter directement au panier
     if (isSingleProduct) {
       final cartItem = cartController.productToCartItem(product, 1);
       cartController.addOneToCart(cartItem);
