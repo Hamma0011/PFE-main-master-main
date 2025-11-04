@@ -2,6 +2,7 @@ import 'package:get/get.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:flutter/material.dart';
 import '../../personalization/screens/brands/mon_etablissement_screen.dart';
+import '../../shop/screens/order/gerant_order_management_screen.dart';
 import '../models/notification_model.dart';
 
 class NotificationController extends GetxController {
@@ -95,8 +96,20 @@ class NotificationController extends GetxController {
   void handleNotificationTap(NotificationModel n) async {
     await markAsRead(n.id);
 
-    if (n.etablissementId != null) {
-      // Navigate directly to MonEtablissementScreen
+    // Vérifier si c'est une notification de commande
+    final titleLower = n.title.toLowerCase();
+    final messageLower = n.message.toLowerCase();
+    final isOrderNotification = titleLower.contains('commande') || 
+                                titleLower.contains('order') ||
+                                messageLower.contains('commande') ||
+                                messageLower.contains('order');
+
+    if (isOrderNotification) {
+      // Rediriger vers la page de gestion des commandes pour le gérant
+      Get.to(() => const GerantOrderManagementScreen());
+    } else if (n.etablissementId != null) {
+      // Pour les autres notifications liées à un établissement,
+      // naviguer vers MonEtablissementScreen
       Get.to(() => MonEtablissementScreen(),
           arguments: {'etablissementId': n.etablissementId});
     }

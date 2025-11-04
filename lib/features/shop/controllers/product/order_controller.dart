@@ -367,6 +367,14 @@ class OrderController extends GetxController {
       
       await orderRepository.saveOrder(order, user.id);
 
+      // Envoyer une notification au gérant de l'établissement
+      try {
+        await _notifyGerantOfNewOrder(etablissementId, order);
+      } catch (e) {
+        debugPrint('Erreur lors de l\'envoi de la notification au gérant: $e');
+        // Ne pas bloquer le processus si la notification échoue
+      }
+
       cartController.clearCart();
       TFullScreenLoader.stopLoading();
 
@@ -608,6 +616,55 @@ class OrderController extends GetxController {
       debugPrint('Notification envoyée à $receiverRole: $title');
     } catch (e) {
       debugPrint('Erreur envoi notification: $e');
+    }
+  }
+
+  /// Notifier le gérant lorsqu'une nouvelle commande est reçue
+  Future<void> _notifyGerantOfNewOrder(String etablissementId, OrderModel order) async {
+    try {
+      debugPrint('🔔 Début de la notification au gérant pour l\'établissement: $etablissementId');
+      
+      // Récupérer directement l'ID du gérant depuis la base de données
+      final etablissementResponse = await _db
+          .from('etablissements')
+          .select('id_owner, name')
+          .eq('id', etablissementId)
+          .maybeSingle();
+      
+      if (etablissementResponse == null) {
+        debugPrint('⚠️ Établissement non trouvé: $etablissementId');
+        return;
+      }
+
+      final gerantId = etablissementResponse['id_owner']?.toString() ?? '';
+      final etablissementName = etablissementResponse['name']?.toString() ?? 'l\'établissement';
+      
+      if (gerantId.isEmpty) {
+        debugPrint('⚠️ Aucun gérant trouvé pour l\'établissement: $etablissementId');
+        return;
+      }
+
+      // Calculer le nombre total d'articles
+      final totalItems = order.items.fold<int>(0, (sum, item) => sum + item.quantity);
+      
+      // Créer le message de notification avec le nom de l'établissement
+      final message = 'Nouvelle commande reçue pour $etablissementName : ${totalItems} article${totalItems > 1 ? 's' : ''} pour un montant total de ${order.totalAmount.toStringAsFixed(2)} DT';
+
+      // Envoyer la notification au gérant
+      await _db.from('notifications').insert({
+        'user_id': gerantId,
+        'title': 'Nouvelle commande reçue',
+        'message': message,
+        'read': false,
+        'etablissement_id': etablissementId,
+        'created_at': DateTime.now().toIso8601String(),
+      });
+
+      debugPrint('✅ Notification envoyée au gérant $gerantId pour la commande');
+    } catch (e, stackTrace) {
+      debugPrint('❌ Erreur lors de la notification au gérant: $e');
+      debugPrint('Stack trace: $stackTrace');
+      // Ne pas lancer l'erreur pour ne pas bloquer le processus de commande
     }
   }
 }

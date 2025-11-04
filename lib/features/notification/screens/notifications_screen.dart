@@ -248,20 +248,20 @@ class _NotificationItem extends StatelessWidget {
                     ),
                   ],
           ),
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // Indicateur de notification non lue (barre verticale)
-              if (!isRead)
-                Container(
-                  width: 4,
-                  height: double.infinity,
-                  margin: const EdgeInsets.only(right: AppSizes.md),
-                  decoration: BoxDecoration(
-                    color: AppColors.primary,
-                    borderRadius: BorderRadius.circular(2),
+          child: IntrinsicHeight(
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                // Indicateur de notification non lue (barre verticale)
+                if (!isRead)
+                  Container(
+                    width: 4,
+                    margin: const EdgeInsets.only(right: AppSizes.md),
+                    decoration: BoxDecoration(
+                      color: AppColors.primary,
+                      borderRadius: BorderRadius.circular(2),
+                    ),
                   ),
-                ),
               // Icône de notification avec fond dégradé
               Container(
                 width: 56,
@@ -300,11 +300,11 @@ class _NotificationItem extends StatelessWidget {
                 ),
               ),
               const SizedBox(width: AppSizes.md),
-              // Contenu de la notification
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
+                // Contenu de la notification
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
                     // Titre avec badge "Nouveau" si non lue
                     Row(
                       children: [
@@ -389,6 +389,7 @@ class _NotificationItem extends StatelessWidget {
                 ),
               ),
             ],
+            ),
           ),
         ),
       ),

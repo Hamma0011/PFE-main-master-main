@@ -27,8 +27,9 @@ class _GerantOrderManagementScreenState
     with SingleTickerProviderStateMixin {
   final OrderController orderController = OrderController.instance;
   final UserController userController = Get.find<UserController>();
-  final EtablissementController etablissementController = EtablissementController.instance;
-  
+  final EtablissementController etablissementController =
+      EtablissementController.instance;
+
   String? _currentEtablissementId;
 
   late TabController _tabController;
@@ -71,9 +72,12 @@ class _GerantOrderManagementScreenState
       }
 
       // Récupérer l'établissement de l'utilisateur connecté
-      final etablissement = await etablissementController.getEtablissementUtilisateurConnecte();
-      
-      if (etablissement == null || etablissement.id == null || etablissement.id!.isEmpty) {
+      final etablissement =
+          await etablissementController.getEtablissementUtilisateurConnecte();
+
+      if (etablissement == null ||
+          etablissement.id == null ||
+          etablissement.id!.isEmpty) {
         Future.delayed(Duration.zero, () {
           TLoaders.errorSnackBar(
             title: "Erreur d'accès",
@@ -103,9 +107,10 @@ class _GerantOrderManagementScreenState
 
     // S'assurer que seules les commandes de l'établissement du gérant sont affichées
     List<OrderModel> ordersToFilter = orderController.orders;
-    
+
     // Filtrer par établissement si on a un ID d'établissement
-    if (_currentEtablissementId != null && _currentEtablissementId!.isNotEmpty) {
+    if (_currentEtablissementId != null &&
+        _currentEtablissementId!.isNotEmpty) {
       ordersToFilter = ordersToFilter
           .where((order) => order.etablissementId == _currentEtablissementId)
           .toList();
@@ -122,15 +127,17 @@ class _GerantOrderManagementScreenState
         break;
       case 2:
         filteredOrders = ordersToFilter
-            .where((order) => order.status == OrderStatus.preparing || 
-                           order.status == OrderStatus.ready)
+            .where((order) =>
+                order.status == OrderStatus.preparing ||
+                order.status == OrderStatus.ready)
             .toList();
         break;
       case 3:
         filteredOrders = ordersToFilter
-            .where((order) => order.status == OrderStatus.delivered ||
-                           order.status == OrderStatus.cancelled ||
-                           order.status == OrderStatus.refused)
+            .where((order) =>
+                order.status == OrderStatus.delivered ||
+                order.status == OrderStatus.cancelled ||
+                order.status == OrderStatus.refused)
             .toList();
         break;
       default:
@@ -811,7 +818,7 @@ class _GerantOrderManagementScreenState
             TextField(
               controller: reasonController,
               decoration: const InputDecoration(
-                hintText: 'Ex: Établissement fermé, Produit indisponible...',
+                hintText: '...',
                 border: OutlineInputBorder(),
               ),
               maxLines: 3,
