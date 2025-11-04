@@ -10,6 +10,7 @@ import '../../../features/shop/models/etablissement_model.dart';
 import '../../../features/shop/models/produit_model.dart';
 import '../../../features/shop/models/statut_etablissement_model.dart';
 import '../../../utils/exceptions/platform_exceptions.dart';
+import '../order/order_repository.dart';
 
 class ProduitRepository extends GetxController {
   static ProduitRepository get instance => Get.find();
@@ -422,7 +423,63 @@ class ProduitRepository extends GetxController {
     } on PostgrestException catch (e) {
       throw Exception('Erreur Supabase: ${e.message}');
     } catch (e) {
-      rethrow; // important pour que Flutter te montre l’exception dans la console
+      rethrow; // important pour que Flutter te montre l'exception dans la console
+    }
+  }
+
+  /// Récupérer les produits les plus commandés avec leurs détails complets
+  Future<List<ProduitModel>> getMostOrderedProductsWithDetails({
+    int days = 30,
+    int limit = 10,
+  }) async {
+    try {
+      final orderRepository = OrderRepository.instance;
+      
+      // Récupérer les IDs et quantités des produits les plus commandés
+      final mostOrdered = await orderRepository.getMostOrderedProducts(
+        days: days,
+        limit: limit,
+      );
+      
+      if (mostOrdered.isEmpty) {
+        return [];
+      }
+      
+      // Récupérer les IDs des produits
+      final productIds = mostOrdered.map((e) => e['productId'] as String).toList();
+      
+      // Récupérer les détails complets des produits
+      final productsResponse = await _db
+          .from(_table)
+          .select('*, etablissement:etablissement_id(*)')
+          .inFilter('id', productIds);
+      
+      if (productsResponse.isEmpty) {
+        return [];
+      }
+      
+      // Convertir en ProduitModel
+      final products = (productsResponse as List)
+          .map((json) => ProduitModel.fromMap(json as Map<String, dynamic>))
+          .toList();
+      
+      // Créer un map pour retrouver les quantités
+      final quantityMap = <String, int>{};
+      for (final e in mostOrdered) {
+        quantityMap[e['productId'] as String] = e['totalQuantity'] as int;
+      }
+      
+      // Trier les produits selon l'ordre des quantités (plus commandés en premier)
+      products.sort((a, b) {
+        final qtyA = quantityMap[a.id] ?? 0;
+        final qtyB = quantityMap[b.id] ?? 0;
+        return qtyB.compareTo(qtyA);
+      });
+      
+      return products;
+    } catch (e) {
+      debugPrint('Erreur lors de la récupération des produits les plus commandés: $e');
+      throw 'Erreur lors de la récupération des produits les plus commandés: $e';
     }
   }
 

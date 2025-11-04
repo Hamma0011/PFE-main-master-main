@@ -1,4 +1,5 @@
 import 'package:caferesto/utils/popups/loaders.dart';
+import 'package:flutter/foundation.dart';
 import 'package:get/get.dart';
 
 import '../../../features/shop/models/order_model.dart';
@@ -84,6 +85,67 @@ class OrderRepository extends GetxController {
           .toList();
     } catch (e) {
       throw 'Erreur lors du chargement des commandes: $e';
+    }
+  }
+
+  /// Récupérer les IDs des produits les plus commandés avec leurs quantités
+  /// [days] : nombre de jours à prendre en compte (par défaut 30)
+  /// [limit] : nombre de produits à retourner (par défaut 10)
+  Future<List<Map<String, dynamic>>> getMostOrderedProducts({
+    int days = 30,
+    int limit = 10,
+  }) async {
+    try {
+      // Date limite (30 jours en arrière)
+      final dateLimit = DateTime.now().subtract(Duration(days: days));
+      
+      // Récupérer toutes les commandes des 30 derniers jours (sauf annulées/refusées)
+      final ordersResponse = await _db
+          .from('orders')
+          .select('items, created_at, status')
+          .gte('created_at', dateLimit.toIso8601String())
+          .not('status', 'in', '(cancelled,refused)'); // Exclure les annulées/refusées
+      
+      if ((ordersResponse as List).isEmpty) {
+        return [];
+      }
+      
+      // Map pour agréger les quantités par produit
+      final Map<String, int> productQuantities = {};
+      
+      // Parcourir toutes les commandes
+      for (final orderData in ordersResponse as List) {
+        final items = orderData['items'] as List?;
+        if (items == null || items.isEmpty) continue;
+        
+        // Parcourir tous les items de chaque commande
+        for (final item in items) {
+          final itemMap = Map<String, dynamic>.from(item);
+          final productId = itemMap['productId']?.toString() ?? '';
+          final quantity = (itemMap['quantity'] as num?)?.toInt() ?? 0;
+          
+          if (productId.isEmpty || quantity <= 0) continue;
+          
+          // Ajouter la quantité au total
+          productQuantities[productId] = (productQuantities[productId] ?? 0) + quantity;
+        }
+      }
+      
+      // Créer la liste des résultats avec les quantités totales
+      final results = productQuantities.entries.map((entry) {
+        return {
+          'productId': entry.key,
+          'totalQuantity': entry.value,
+        };
+      }).toList();
+      
+      // Trier par quantité décroissante et limiter
+      results.sort((a, b) => (b['totalQuantity'] as int).compareTo(a['totalQuantity'] as int));
+      
+      return results.take(limit).toList();
+    } catch (e) {
+      debugPrint('Erreur lors de la récupération des produits les plus commandés: $e');
+      throw 'Erreur lors de la récupération des produits les plus commandés: $e';
     }
   }
 }

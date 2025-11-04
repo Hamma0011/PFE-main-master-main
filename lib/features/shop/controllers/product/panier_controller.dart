@@ -211,11 +211,13 @@ class CartController extends GetxController {
         TLoaders.customToast(message: 'Veuillez choisir une variante');
         return;
       }
-      if (variationController.selectedVariation.value.stock < 1) {
+      // Vérifier le stock uniquement pour les produits stockables
+      if (product.isStockable && variationController.selectedVariation.value.stock < 1) {
         TLoaders.customToast(message: 'Produit hors stock');
         return;
       }
-    } else if (product.stockQuantity < 1) {
+    } else if (product.isStockable && product.stockQuantity < 1) {
+      // Vérifier le stock uniquement pour les produits stockables
       TLoaders.customToast(message: 'Produit hors stock');
       return;
     }

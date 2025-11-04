@@ -319,8 +319,11 @@ class ProduitController extends GetxController {
       // Show loader while loading products
       isLoading.value = true;
 
-      // Fetch products from an API or database
-      final products = await produitRepository.getFeaturedProducts();
+      // Fetch most ordered products instead of featured products (top 10 des 30 derniers jours)
+      final products = await produitRepository.getMostOrderedProductsWithDetails(
+        days: 30,
+        limit: 10,
+      );
       
       // Charger l'établissement pour chaque produit si manquant
       final productsWithEtab = await Future.wait(
@@ -593,8 +596,11 @@ class ProduitController extends GetxController {
   /// Fetch Products
   Future<List<ProduitModel>> fetchAllFeaturedProducts() async {
     try {
-      // Fetch products from an API or database
-      final products = await produitRepository.getAllFeaturedProducts();
+      // Fetch most ordered products instead of featured products (limite plus élevée pour la page "Tous les produits")
+      final products = await produitRepository.getMostOrderedProductsWithDetails(
+        days: 30,
+        limit: 100, // Limite plus élevée pour la page "Tous les produits"
+      );
       return products;
     } catch (e) {
       // Handle error
