@@ -20,6 +20,8 @@ import '../../controllers/user_controller.dart';
 import '../address/address.dart';
 import '../brands/mon_etablissement_screen.dart';
 import '../categories/category_manager_screen.dart';
+import '../dashboard/admin_dashboard_screen.dart';
+import '../dashboard/gerant_dashboard_screen.dart';
 import '../../../shop/controllers/etablissement_controller.dart';
 import '../../../../utils/popups/loaders.dart';
 import '../../../shop/models/statut_etablissement_model.dart';
@@ -134,6 +136,22 @@ class SettingsScreen extends StatelessWidget {
                   TSectionHeading(title: "Gestion", showActionButton: false),
                   SizedBox(height: AppSizes.spaceBtwItems),
                 ],
+
+                // Dashboard
+                if (isAdminOnly())
+                  TSettingsMenuTile(
+                    icon: Iconsax.chart_2,
+                    title: "Dashboard Admin",
+                    subTitle: "Statistiques et analyses détaillées",
+                    onTap: () => Get.to(() => const AdminDashboardScreen()),
+                  ),
+                if (userController.user.value.role == 'Gérant')
+                  TSettingsMenuTile(
+                    icon: Iconsax.chart_2,
+                    title: "Dashboard Gérant",
+                    subTitle: "Statistiques de mon établissement",
+                    onTap: () => Get.to(() => const GerantDashboardScreen()),
+                  ),
 
                 if (isAdminGerant())
                   TSettingsMenuTile(
