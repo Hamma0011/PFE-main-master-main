@@ -11,7 +11,7 @@ class CartController extends GetxController {
     try {
       return Get.find<CartController>();
     } catch (e) {
-      // If not found, create it (shouldn't happen with proper binding)
+      // Si non trouvé, le créer (ne devrait pas arriver avec un binding approprié)
       return Get.put(CartController(), permanent: true);
     }
   }
@@ -20,26 +20,27 @@ class CartController extends GetxController {
   RxDouble totalCartPrice = 0.0.obs;
   final RxMap<String, int> tempQuantityMap = <String, int>{}.obs;
   RxList<CartItemModel> cartItems = <CartItemModel>[].obs;
-  
+
   // ID de la commande en cours de modification (null si nouvelle commande)
   final RxString editingOrderId = ''.obs;
 
-  // Get VariationController from GetX dependency injection
-  VariationController get variationController =>
-      VariationController.instance;
+  // Obtenir VariationController depuis l'injection de dépendance GetX
+  VariationController get variationController => VariationController.instance;
 
   CartController() {
-    loadCartItems();
+    chargerArticlesPanier();
   }
 
-  bool isVariationInCart(String productId, String variationId) {
+  /// Vérifie si une variante est dans le panier
+  bool estVariationDansPanier(String productId, String variationId) {
     return cartItems.any((item) =>
         item.productId == productId &&
         item.variationId == variationId &&
         item.variationId.isNotEmpty);
   }
 
-  void updateVariation(String productId, String newSize, double newPrice) {
+  /// Met à jour la variante d'un produit dans le panier
+  void mettreAJourVariation(String productId, String newSize, double newPrice) {
     int index = cartItems.indexWhere((item) => item.productId == productId);
     if (index >= 0) {
       cartItems[index] = cartItems[index].copyWith(
@@ -50,10 +51,11 @@ class CartController extends GetxController {
         price: newPrice,
       );
     }
-    updateCartTotals();
+    mettreAJourTotauxPanier();
   }
 
-  bool canAddProduct(ProduitModel product) {
+  /// Vérifie si un produit peut être ajouté au panier
+  bool peutAjouterProduit(ProduitModel product) {
     // Si le panier est vide, tout est autorisé
     if (cartItems.isEmpty) return true;
 
@@ -74,71 +76,77 @@ class CartController extends GetxController {
     }
   }
 
-  // --- Helper methods --------------------------------------------------------
+  // --- Méthodes helper --------------------------------------------------------
 
-  bool hasSelectedVariant() {
+  /// Vérifie si une variante est sélectionnée
+  bool aVarianteSelectionnee() {
     final variation = variationController.selectedVariation.value;
     return variation.id.isNotEmpty && variation.attributeValues.isNotEmpty;
   }
 
-  String _getKey(ProduitModel product) {
+  /// Obtient la clé unique d'un produit (ID + variante)
+  String _obtenirCle(ProduitModel product) {
     final variationId = product.isVariable
         ? variationController.selectedVariation.value.id
         : "";
     return '${product.id}-$variationId';
   }
 
-  // --- Quantity Management ---------------------------------------------------
+  // --- Gestion des quantités ---------------------------------------------------
 
-  void updateTempQuantity(ProduitModel product, int quantity) {
-    final key = _getKey(product);
+  /// Met à jour la quantité temporaire d'un produit
+  void mettreAJourQuantiteTemporaire(ProduitModel product, int quantity) {
+    final key = _obtenirCle(product);
     if (quantity <= 0) {
-      tempQuantityMap.remove(key); // remove entry when 0
+      tempQuantityMap.remove(key); // Supprimer l'entrée quand la quantité est 0
     } else {
       tempQuantityMap[key] = quantity;
     }
   }
 
-  int getTempQuantity(ProduitModel product) {
-    final key = _getKey(product);
-    // Use temp if exists, else fallback to actual cart quantity
+  /// Obtient la quantité temporaire d'un produit
+  int obtenirQuantiteTemporaire(ProduitModel product) {
+    final key = _obtenirCle(product);
+    // Utiliser la quantité temporaire si elle existe, sinon utiliser la quantité réelle du panier
     final tempQuantity = tempQuantityMap[key];
     if (tempQuantity != null) {
       return tempQuantity;
     }
-    // If no temp quantity, get existing quantity from cart
-    return getExistingQuantity(product);
+    // Si aucune quantité temporaire, obtenir la quantité existante du panier
+    return obtenirQuantiteExistante(product);
   }
 
-  int getExistingQuantity(ProduitModel product) {
+  /// Obtient la quantité existante d'un produit dans le panier
+  int obtenirQuantiteExistante(ProduitModel product) {
     if (product.isSingle) {
-      return getProductQuantityInCart(product.id);
+      return obtenirQuantiteProduitDansPanier(product.id);
     } else {
       final variationId = variationController.selectedVariation.value.id;
-      // For variable products, only return quantity if variation is selected
+      // Pour les produits variables, retourner la quantité seulement si une variante est sélectionnée
       if (variationId.isEmpty) {
-        // No variation selected yet, return 0 (not in cart)
+        // Aucune variante sélectionnée, retourner 0 (pas dans le panier)
         return 0;
       }
-      return getVariationQuantityInCart(product.id, variationId);
+      return obtenirQuantiteVariationDansPanier(product.id, variationId);
     }
   }
-  
-  /// Reset temp quantity for a product (useful when navigating to add new variation)
-  void resetTempQuantityForProduct(String productId) {
-    // Remove all temp quantities for this product (regardless of variation)
+
+  /// Réinitialise la quantité temporaire d'un produit (utile lors de la navigation pour ajouter une nouvelle variante)
+  void reinitialiserQuantiteTemporaireProduit(String productId) {
+    // Supprimer toutes les quantités temporaires pour ce produit (peu importe la variante)
     tempQuantityMap.removeWhere((key, value) => key.startsWith('$productId-'));
   }
 
-  // --- Add / Remove from Cart -----------------------------------------------
+  // --- Ajouter / Retirer du panier -----------------------------------------------
 
-  void modifyCartVariation(String productId, int currentIndex) {
+  /// Modifie la variante d'un produit dans le panier
+  void modifierVariationPanier(String productId, int currentIndex) {
     if (variationController.selectedVariation.value.id.isEmpty) {
       TLoaders.customToast(message: 'Veuillez choisir une variante');
       return;
     }
 
-    // Get the selected size (variation ID is based on size)
+    // Obtenir la taille sélectionnée (l'ID de variation est basé sur la taille)
     final selectedSize = variationController.selectedSize.value;
     if (selectedSize.isEmpty) {
       TLoaders.customToast(message: 'Veuillez choisir une variante');
@@ -182,8 +190,8 @@ class CartController extends GetxController {
       'prix': price.toString(),
     };
 
-    // Get the temp quantity (user may have modified it)
-    final tempQuantity = getTempQuantity(product);
+    // Obtenir la quantité temporaire (l'utilisateur peut l'avoir modifiée)
+    final tempQuantity = obtenirQuantiteTemporaire(product);
     final finalQuantity = tempQuantity > 0 ? tempQuantity : item.quantity;
 
     cartItems[currentIndex] = item.copyWith(
@@ -196,17 +204,18 @@ class CartController extends GetxController {
           : variation.image,
     );
 
-    // Reset temp quantity after modification
-    updateTempQuantity(product, 0);
-    updateCart();
+    // Réinitialiser la quantité temporaire après modification
+    mettreAJourQuantiteTemporaire(product, 0);
+    mettreAJourPanier();
     TLoaders.customToast(message: 'Variante modifiée avec succès');
     Get.back(); // Retourner à l'écran précédent
   }
 
-  void addToCart(ProduitModel product) {
-    if (!canAddProduct(product)) return;
+  /// Ajoute un produit au panier
+  void ajouterAuPanier(ProduitModel product) {
+    if (!peutAjouterProduit(product)) return;
 
-    final quantity = getTempQuantity(product);
+    final quantity = obtenirQuantiteTemporaire(product);
 
     // Vérifications de base
     if (product.isVariable) {
@@ -215,7 +224,8 @@ class CartController extends GetxController {
         return;
       }
       // Vérifier le stock uniquement pour les produits stockables
-      if (product.isStockable && variationController.selectedVariation.value.stock < 1) {
+      if (product.isStockable &&
+          variationController.selectedVariation.value.stock < 1) {
         TLoaders.customToast(message: 'Produit hors stock');
         return;
       }
@@ -225,10 +235,10 @@ class CartController extends GetxController {
       return;
     }
 
-    // If quantity is 0, default to 1 for new items
+    // Si la quantité est 0, par défaut mettre 1 pour les nouveaux articles
     final quantityToAdd = quantity > 0 ? quantity : 1;
 
-    final selectedCartItem = productToCartItem(product, quantityToAdd);
+    final selectedCartItem = produitVersArticlePanier(product, quantityToAdd);
 
     // Vérifier si la variante existe déjà
     final existingIndex = cartItems.indexWhere((item) =>
@@ -245,13 +255,14 @@ class CartController extends GetxController {
     // Ajouter la nouvelle variante
     cartItems.add(selectedCartItem);
     TLoaders.customToast(message: 'Produit ajouté au panier');
-    
-    // Reset temp quantity after successfully adding to cart
-    updateTempQuantity(product, 0);
-    updateCart();
+
+    // Réinitialiser la quantité temporaire après avoir ajouté avec succès au panier
+    mettreAJourQuantiteTemporaire(product, 0);
+    mettreAJourPanier();
   }
 
-  CartItemModel productToCartItem(ProduitModel product, int quantity) {
+  /// Convertit un produit en article de panier
+  CartItemModel produitVersArticlePanier(ProduitModel product, int quantity) {
     if (product.isSingle) {
       variationController.resetSelectedAttributes();
     }
@@ -287,50 +298,54 @@ class CartController extends GetxController {
     );
   }
 
-  // --- Cart Management -------------------------------------------------------
+  // --- Gestion du panier -------------------------------------------------------
 
-  void updateCart() {
-    updateCartTotals();
-    saveCartItems();
+  /// Met à jour le panier (totaux, sauvegarde, rafraîchissement)
+  void mettreAJourPanier() {
+    mettreAJourTotauxPanier();
+    sauvegarderArticlesPanier();
     cartItems.refresh();
   }
 
-  void addOneToCart(CartItemModel item) {
+  /// Ajoute un article au panier (ou augmente la quantité si déjà présent)
+  void ajouterUnAuPanier(CartItemModel item) {
     final index = cartItems.indexWhere((cartItem) =>
         cartItem.productId == item.productId &&
         cartItem.variationId == item.variationId);
 
     if (index >= 0) {
-      // Create new instance to trigger reactivity
+      // Créer une nouvelle instance pour déclencher la réactivité
       cartItems[index] = cartItems[index].copyWith(
         quantity: cartItems[index].quantity + 1,
       );
     } else {
       cartItems.add(item);
     }
-    updateCart();
+    mettreAJourPanier();
   }
 
-  void removeOneFromCart(CartItemModel item) {
+  /// Retire un article du panier (ou diminue la quantité si supérieure à 1)
+  void retirerUnDuPanier(CartItemModel item) {
     final index = cartItems.indexWhere((cartItem) =>
         cartItem.productId == item.productId &&
         cartItem.variationId == item.variationId);
 
     if (index >= 0) {
       if (cartItems[index].quantity > 1) {
-        // Create new instance to trigger reactivity
+        // Créer une nouvelle instance pour déclencher la réactivité
         cartItems[index] = cartItems[index].copyWith(
           quantity: cartItems[index].quantity - 1,
         );
       } else {
-        removeFromCartDialog(index);
-        return; // Don't call updateCart() here, it's called in removeFromCartDialog
+        dialogRetirerDuPanier(index);
+        return; // Ne pas appeler mettreAJourPanier() ici, c'est appelé dans dialogRetirerDuPanier
       }
-      updateCart();
+      mettreAJourPanier();
     }
   }
 
-  void removeFromCartDialog(int index) {
+  /// Affiche un dialogue de confirmation pour retirer un article du panier
+  void dialogRetirerDuPanier(int index) {
     Get.defaultDialog(
       title: 'Confirmation',
       middleText: 'Voulez-vous vraiment supprimer ce produit du panier?',
@@ -338,7 +353,7 @@ class CartController extends GetxController {
       textCancel: 'Non',
       onConfirm: () {
         cartItems.removeAt(index);
-        updateCart();
+        mettreAJourPanier();
         TLoaders.customToast(message: 'Produit supprimé du panier');
         Get.back();
       },
@@ -346,9 +361,10 @@ class CartController extends GetxController {
     );
   }
 
-  // --- Totals & Storage ------------------------------------------------------
+  // --- Totaux et stockage ------------------------------------------------------
 
-  void updateCartTotals() {
+  /// Met à jour les totaux du panier (prix total et nombre d'articles)
+  void mettreAJourTotauxPanier() {
     double calculatedTotalPrice = 0.0;
     int calculatedcartItemsCount = 0;
     for (var item in cartItems) {
@@ -359,58 +375,92 @@ class CartController extends GetxController {
     cartItemsCount.value = calculatedcartItemsCount;
   }
 
-  void saveCartItems() async {
+  /// Calcule le temps de préparation total de la commande
+  /// Les produits de catégories différentes peuvent être préparés en parallèle
+  /// Retourne le temps maximum entre les catégories (car les catégories sont préparées en parallèle)
+  int calculerTempsPreparation() {
+    // Grouper les produits par catégorie
+    final Map<String, int> timeByCategory = {};
+
+    for (var item in cartItems) {
+      final product = item.product;
+      if (product != null && product.categoryId.isNotEmpty) {
+        // Pour chaque catégorie, additionner les temps de préparation
+        // (produits de la même catégorie sont préparés séquentiellement)
+        final categoryTime = product.preparationTime * item.quantity;
+        timeByCategory[product.categoryId] =
+            (timeByCategory[product.categoryId] ?? 0) + categoryTime;
+      }
+    }
+
+    // Si aucune catégorie trouvée, retourner 0
+    if (timeByCategory.isEmpty) return 0;
+
+    // Retourner le maximum entre les catégories
+    // (car les catégories différentes sont préparées en parallèle)
+    return timeByCategory.values.reduce((a, b) => a > b ? a : b);
+  }
+
+  /// Sauvegarde les articles du panier dans le stockage local
+  void sauvegarderArticlesPanier() async {
     final cartItemStrings = cartItems.map((item) => item.toJson()).toList();
     await GetStorage().write('cartItems', cartItemStrings);
   }
 
-  void loadCartItems() async {
+  /// Charge les articles du panier depuis le stockage local
+  void chargerArticlesPanier() async {
     final cartItemStrings = GetStorage().read<List<dynamic>>('cartItems');
     if (cartItemStrings != null) {
       cartItems.assignAll(cartItemStrings
           .map((item) => CartItemModel.fromJson(item as Map<String, dynamic>)));
-      updateCartTotals();
+      mettreAJourTotauxPanier();
     }
   }
 
-  // --- Get Quantities --------------------------------------------------------
+  // --- Obtenir les quantités --------------------------------------------------------
 
-  int getProductQuantityInCart(String productId) {
+  /// Obtient la quantité totale d'un produit dans le panier (toutes variations confondues)
+  int obtenirQuantiteProduitDansPanier(String productId) {
     return cartItems
         .where((item) => item.productId == productId)
         .fold(0, (sum, el) => sum + el.quantity);
   }
 
-  int getVariationQuantityInCart(String productId, String variationId) {
+  /// Obtient la quantité d'une variation spécifique d'un produit dans le panier
+  int obtenirQuantiteVariationDansPanier(String productId, String variationId) {
     final foundItem = cartItems.firstWhereOrNull(
       (item) => item.productId == productId && item.variationId == variationId,
     );
     return foundItem?.quantity ?? 0;
   }
 
-  void clearCart() {
+  /// Vide le panier
+  void viderPanier() {
     tempQuantityMap.clear();
     cartItems.clear();
     editingOrderId.value = '';
-    updateCart();
+    mettreAJourPanier();
   }
 
-  /// Charger les articles d'une commande dans le panier pour modification
-  void loadOrderItemsToCart(List<CartItemModel> orderItems, String orderId) {
-    clearCart();
+  /// Charge les articles d'une commande dans le panier pour modification
+  void chargerArticlesCommandeDansPanier(
+      List<CartItemModel> orderItems, String orderId) {
+    viderPanier();
     cartItems.addAll(orderItems);
     editingOrderId.value = orderId;
-    updateCart();
+    mettreAJourPanier();
   }
 
-  /// Vérifier si une commande est en cours de modification
-  bool get isEditingOrder => editingOrderId.value.isNotEmpty;
+  /// Vérifie si une commande est en cours de modification
+  bool get estEnModificationCommande => editingOrderId.value.isNotEmpty;
 
-  bool canProceedToCheckout() {
+  /// Vérifie si on peut procéder au paiement
+  bool peutPasserAuPaiement() {
     if (cartItems.isEmpty) return false;
 
     for (final item in cartItems) {
-      if (item.quantity <= 0) return false; // prevent checkout if 0 qty
+      if (item.quantity <= 0)
+        return false; // Empêcher le paiement si la quantité est 0
       final product = item.product;
       if (product != null && product.productType == 'variable') {
         if (item.selectedVariation == null || item.selectedVariation!.isEmpty) {
@@ -421,13 +471,14 @@ class CartController extends GetxController {
     return true;
   }
 
-  int getProductQuantity(String productId) {
+  /// Obtient la quantité d'un produit dans le panier (première occurrence)
+  int obtenirQuantiteProduit(String productId) {
     final item = cartItems.firstWhereOrNull((e) => e.productId == productId);
     return item?.quantity ?? 0;
   }
 
-  /// Get all variation IDs that are in cart for a product
-  List<String> getVariationsInCart(String productId) {
+  /// Obtient tous les IDs de variations d'un produit qui sont dans le panier
+  List<String> obtenirVariationsDansPanier(String productId) {
     return cartItems
         .where((item) =>
             item.productId == productId && item.variationId.isNotEmpty)
@@ -435,7 +486,8 @@ class CartController extends GetxController {
         .toList();
   }
 
-  bool areAllVariationsInCart(ProduitModel product) {
+  /// Vérifie si toutes les variations d'un produit sont dans le panier
+  bool sontToutesVariationsDansPanier(ProduitModel product) {
     final allVariationIds = product.sizesPrices.map((sp) => sp.size).toSet();
     final cartVariationIds = cartItems
         .where((item) => item.productId == product.id)
@@ -445,8 +497,8 @@ class CartController extends GetxController {
     return allVariationIds.difference(cartVariationIds).isEmpty;
   }
 
-  /// Get cached map of variations in cart for a product (for performance)
-  Set<String> getVariationsInCartSet(String productId) {
+  /// Obtient un Set des IDs de variations d'un produit dans le panier (pour la performance)
+  Set<String> obtenirVariationsDansPanierSet(String productId) {
     return cartItems
         .where((item) =>
             item.productId == productId && item.variationId.isNotEmpty)

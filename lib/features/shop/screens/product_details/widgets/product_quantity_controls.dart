@@ -26,8 +26,8 @@ class ProductQuantityControls extends StatelessWidget {
       if (!Get.isRegistered<CartController>()) {
         return const SizedBox.shrink();
       }
-      // Use getTempQuantity which properly handles variations and temp quantities
-      final quantity = controller.getTempQuantity(product);
+      // Utiliser obtenirQuantiteTemporaire qui gère correctement les variations et quantités temporaires
+      final quantity = controller.obtenirQuantiteTemporaire(product);
 
       return Container(
         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),

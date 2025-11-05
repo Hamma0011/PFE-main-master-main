@@ -30,7 +30,27 @@ class EtablissementController extends GetxController {
     print('EtablissementController initialisé');
     _subscribeToRealtimeEtablissements();
     fetchFeaturedEtablissements();
-    getTousEtablissements();
+    // Charger les établissements selon le rôle de l'utilisateur
+    _loadEtablissementsAccordingToRole();
+  }
+
+  /// Charge les établissements selon le rôle de l'utilisateur
+  Future<void> _loadEtablissementsAccordingToRole() async {
+    try {
+      final userRole = userController.userRole;
+      final userId = userController.user.value.id;
+
+      if (userRole == 'Admin') {
+        // Les admins voient tous les établissements
+        await getTousEtablissements();
+      } else if (userRole == 'Gérant' && userId.isNotEmpty) {
+        // Les gérants ne voient que leurs propres établissements
+        await fetchEtablissementsByOwner(userId);
+      }
+      // Pour les autres rôles, on ne charge rien
+    } catch (e) {
+      print('Erreur chargement établissements selon rôle: $e');
+    }
   }
 
   @override
@@ -141,9 +161,6 @@ class EtablissementController extends GetxController {
       isLoading.value = true;
 
       final currentUser = userController.user.value;
-      final etabWithOwner = e.copyWith(
-        owner: currentUser, // Inclure l'owner immédiatement
-      );
 
       // Create in repo
       final id = await repo.createEtablissement(e);
@@ -206,6 +223,22 @@ class EtablissementController extends GetxController {
         return false;
       }
 
+      // Vérifier que le gérant ne peut modifier que ses propres établissements
+      if (_isUserGerant()) {
+        final etablissement = etablissements.firstWhereOrNull((e) => e.id == id);
+        if (etablissement == null) {
+          TLoaders.errorSnackBar(message: 'Établissement non trouvé');
+          return false;
+        }
+        final userId = userController.user.value.id;
+        if (etablissement.idOwner != userId) {
+          TLoaders.errorSnackBar(
+            message: 'Vous ne pouvez modifier que vos propres établissements',
+          );
+          return false;
+        }
+      }
+
       isLoading.value = true;
 
       // S'assurer que le statut est converti correctement
@@ -266,6 +299,7 @@ class EtablissementController extends GetxController {
   Future<bool> changeStatutEtablissement(
       String id, StatutEtablissement newStatut) async {
     try {
+      // Seuls les admins peuvent changer le statut
       if (!_isUserAdmin()) {
         _logError('changement statut', 'Permission refusée : Admin requis');
         return false;

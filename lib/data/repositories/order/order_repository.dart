@@ -55,6 +55,7 @@ class OrderRepository extends GetxController {
         'pickup_time_range': order.pickupTimeRange,
         'created_at': order.createdAt?.toIso8601String(),
         'updated_at': order.updatedAt?.toIso8601String(),
+        'preparation_time': order.preparationTime,
       }).select();
     } on PostgrestException catch (e) {
       print('Postgres error: ${e.message}');

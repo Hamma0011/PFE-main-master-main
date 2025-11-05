@@ -24,7 +24,7 @@ class OrderScreen extends StatelessWidget {
         ),
       ),
       body: RefreshIndicator(
-        onRefresh: () => orderController.fetchUserOrders(),
+        onRefresh: () => orderController.recupererCommandesUtilisateur(),
         child: const Padding(
           padding: EdgeInsets.all(AppSizes.defaultSpace),
           child: TOrderListItems(),

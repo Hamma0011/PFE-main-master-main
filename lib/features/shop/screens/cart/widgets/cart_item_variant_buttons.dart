@@ -28,13 +28,13 @@ class CartItemVariantButtons extends StatelessWidget {
         return const SizedBox.shrink();
       }
       // Vérifie si la variation actuelle est déjà dans le panier
-      final currentVariationInCart = controller.isVariationInCart(
+      final currentVariationInCart = controller.estVariationDansPanier(
         cartItem.productId,
         cartItem.variationId,
       );
 
       // Vérifie si toutes les variations du produit sont déjà dans le panier
-      final allVariationsInCart = controller.areAllVariationsInCart(product);
+      final allVariationsInCart = controller.sontToutesVariationsDansPanier(product);
 
       return Row(
         children: [

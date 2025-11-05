@@ -90,7 +90,7 @@ class _GerantOrderManagementScreenState
       final etablissementId = etablissement.id!;
       _currentEtablissementId = etablissementId;
       debugPrint('🔄 Loading orders for establishment: $etablissementId');
-      await orderController.fetchGerantOrders(etablissementId);
+      await orderController.recupererCommandesGerant(etablissementId);
     } catch (e) {
       debugPrint('Error in _loadGerantOrders: $e');
       Future.delayed(Duration.zero, () {
@@ -291,8 +291,8 @@ class _GerantOrderManagementScreenState
   Widget _buildStatsOverview() {
     return Obx(() {
       final totalOrders = orderController.orders.length;
-      final pendingCount = orderController.pendingOrders.length;
-      final activeCount = orderController.activeOrders.length;
+      final pendingCount = orderController.commandesEnAttente.length;
+      final activeCount = orderController.commandesActives.length;
 
       return Container(
         margin: const EdgeInsets.symmetric(horizontal: AppSizes.defaultSpace),
@@ -800,21 +800,21 @@ class _GerantOrderManagementScreenState
 
   // Actions
   void _acceptOrder(OrderModel order) {
-    orderController.updateOrderStatus(
+    orderController.mettreAJourStatutCommande(
       orderId: order.id,
       newStatus: OrderStatus.preparing,
     );
   }
 
   void _markAsReady(OrderModel order) {
-    orderController.updateOrderStatus(
+    orderController.mettreAJourStatutCommande(
       orderId: order.id,
       newStatus: OrderStatus.ready,
     );
   }
 
   void _markAsDelivered(OrderModel order) {
-    orderController.updateOrderStatus(
+    orderController.mettreAJourStatutCommande(
       orderId: order.id,
       newStatus: OrderStatus.delivered,
     );
@@ -859,7 +859,7 @@ class _GerantOrderManagementScreenState
                 return;
               }
 
-              orderController.updateOrderStatus(
+              orderController.mettreAJourStatutCommande(
                 orderId: order.id,
                 newStatus: OrderStatus.refused,
                 refusalReason: reasonController.text.trim(),

@@ -32,12 +32,12 @@ class ProductMainActionButton extends StatelessWidget {
         final variationController = controller.variationController;
         final selectedSize = variationController.selectedSize.value;
         if (selectedSize.isNotEmpty) {
-          quantity = controller.getVariationQuantityInCart(product.id, selectedSize);
+          quantity = controller.obtenirQuantiteVariationDansPanier(product.id, selectedSize);
         } else {
           quantity = 0; // Pas de taille sélectionnée = pas dans le panier
         }
       } else {
-        quantity = controller.getProductQuantityInCart(product.id);
+        quantity = controller.obtenirQuantiteProduitDansPanier(product.id);
       }
       
       final hasItems = quantity > 0;

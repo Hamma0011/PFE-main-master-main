@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import '../../../../common/widgets/appbar/appbar.dart';
 import '../../../../data/repositories/etablissement/etablissement_repository.dart';
+import '../../../../utils/popups/loaders.dart';
 import '../../controllers/user_controller.dart';
 import '../../../shop/controllers/etablissement_controller.dart';
 import '../../../shop/models/etablissement_model.dart';
@@ -33,8 +34,22 @@ class _AdminGestionEtablissementsScreenState
   Future<void> _loadEtablissements() async {
     setState(() => _isLoading = true);
     try {
-      final data = await _etablissementController.getTousEtablissements();
-      setState(() => _etablissements = data);
+      final userRole = _userController.userRole;
+      final user = _userController.user.value;
+
+      // Vérifier le rôle de l'utilisateur
+      if (userRole == 'Gérant' && user.id.isNotEmpty) {
+        // Les gérants ne voient que leurs propres établissements
+        final data = await _etablissementController.fetchEtablissementsByOwner(user.id);
+        setState(() => _etablissements = data ?? []);
+      } else if (userRole == 'Admin') {
+        // Les admins voient tous les établissements
+        final data = await _etablissementController.getTousEtablissements();
+        setState(() => _etablissements = data);
+      } else {
+        // Rôle non autorisé
+        setState(() => _etablissements = []);
+      }
     } catch (e) {
       // print('Erreur chargement établissements: $e');
     } finally {
@@ -43,6 +58,17 @@ class _AdminGestionEtablissementsScreenState
   }
 
   Future<void> _changerStatut(Etablissement etab) async {
+    final userRole = _userController.userRole;
+    
+    // Seuls les admins peuvent changer le statut
+    if (userRole != 'Admin') {
+      TLoaders.warningSnackBar(
+        title: 'Permission refusée',
+        message: 'Seuls les administrateurs peuvent modifier le statut des établissements',
+      );
+      return;
+    }
+
     StatutEtablissement? nouveauStatut = await showDialog<StatutEtablissement>(
       context: context,
       builder: (context) {
@@ -101,11 +127,14 @@ class _AdminGestionEtablissementsScreenState
 
   @override
   Widget build(BuildContext context) {
-    if (_userController.userRole != 'Admin') {
+    final userRole = _userController.userRole;
+    
+    // Vérifier que l'utilisateur est Admin ou Gérant
+    if (userRole != 'Admin' && userRole != 'Gérant') {
       return const Scaffold(
         body: Center(
           child: Text(
-            "Accès refusé — réservé aux administrateurs",
+            "Accès refusé — réservé aux administrateurs et gérants",
             style: TextStyle(color: Colors.red, fontSize: 16),
           ),
         ),
@@ -152,10 +181,12 @@ class _AdminGestionEtablissementsScreenState
                             ),
                           ],
                         ),
-                        trailing: IconButton(
-                          icon: const Icon(Icons.edit),
-                          onPressed: () => _changerStatut(etab),
-                        ),
+                        trailing: userRole == 'Admin'
+                            ? IconButton(
+                                icon: const Icon(Icons.edit),
+                                onPressed: () => _changerStatut(etab),
+                              )
+                            : null, // Les gérants ne peuvent pas modifier le statut
                       ),
                     );
                   },

@@ -253,7 +253,7 @@ class TimeSlotModal {
         onTap: isPast
             ? null
             : () {
-                orderController.setSelectedSlot(dayLabel, slot);
+                orderController.definirCreneauSelectionne(dayLabel, slot);
               },
         child: Container(
           margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),

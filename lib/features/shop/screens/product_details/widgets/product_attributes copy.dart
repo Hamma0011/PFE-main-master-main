@@ -55,7 +55,7 @@ class TProductAttributes extends StatelessWidget {
                 onSelected: (bool selected) {
                   if (selected) {
                     variationController.selectVariation(sp.size, sp.price);
-                    CartController.instance.updateVariation(
+                    CartController.instance.mettreAJourVariation(
                       product.id,
                       variationController.selectedSize.value,
                       variationController.selectedPrice.value,

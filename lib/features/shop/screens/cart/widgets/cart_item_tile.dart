@@ -138,17 +138,17 @@ class CartItemTile extends StatelessWidget {
               dark: dark,
               onDecrement: () {
                 if (item.quantity > 1) {
-                  controller.removeOneFromCart(item);
+                  controller.retirerUnDuPanier(item);
                 } else {
-                  controller.removeFromCartDialog(index);
+                  controller.dialogRetirerDuPanier(index);
                 }
               },
-              onIncrement: () => controller.addOneToCart(item),
+              onIncrement: () => controller.ajouterUnAuPanier(item),
             ),
             const SizedBox(height: 6),
             if (showDelete)
               IconButton(
-                onPressed: () => controller.removeFromCartDialog(index),
+                onPressed: () => controller.dialogRetirerDuPanier(index),
                 icon: const Icon(Icons.delete_outline, color: Colors.redAccent),
                 tooltip: 'Supprimer',
               ),

@@ -416,7 +416,7 @@ class CheckoutScreen extends StatelessWidget {
     OrderController orderController,
     double totalAmount,
     BuildContext context,
-  ) {
+  ) async {
     final cartController = CartController.instance;
     final addressController = Get.find<AddressController>();
 
@@ -425,16 +425,6 @@ class CheckoutScreen extends StatelessWidget {
       TLoaders.warningSnackBar(
         title: 'Adresse manquante',
         message: 'Veuillez sélectionner une adresse de livraison.',
-      );
-      return;
-    }
-
-    // Vérifier créneau
-    if (orderController.selectedSlot.value == null ||
-        orderController.selectedDay.value == null) {
-      TLoaders.warningSnackBar(
-        title: 'Créneau manquant',
-        message: 'Veuillez choisir un créneau de retrait pour votre commande',
       );
       return;
     }
@@ -450,6 +440,35 @@ class CheckoutScreen extends StatelessWidget {
 
     // Calcul etablissementId + date/heure
     final etablissementId = cartController.cartItems.first.etablissementId;
+
+    // Vérifier créneau - si aucun n'est sélectionné, calculer un créneau par défaut
+    if (orderController.selectedSlot.value == null ||
+        orderController.selectedDay.value == null) {
+      // Calculer le temps de préparation de la commande
+      final preparationTime = cartController.calculerTempsPreparation();
+      
+      // Calculer et définir un créneau par défaut (1h + 15 min + temps de préparation)
+      final creneauValide = await orderController.calculerCreneauParDefaut(
+        preparationTime,
+        etablissementId,
+      );
+      
+      if (!creneauValide) {
+        // L'établissement est fermé au créneau calculé
+        TLoaders.errorSnackBar(
+          title: 'Établissement fermé',
+          message: 'L\'établissement est fermé au créneau proposé. Veuillez choisir un créneau de retrait manuellement.',
+        );
+        return;
+      }
+      
+      // Afficher un message informatif
+      TLoaders.successSnackBar(
+        title: 'Créneau automatique',
+        message: 'Un créneau de retrait a été automatiquement défini pour vous : ${orderController.selectedDay.value!} - ${orderController.selectedSlot.value!}',
+      );
+    }
+    
     final selectedAddressId = addressController.selectedAddress.value.id;
 
     // Calculate pickupDateTime based on selected day
@@ -480,7 +499,7 @@ class CheckoutScreen extends StatelessWidget {
     );
 
     // Envoi
-    orderController.processOrder(
+    orderController.traiterCommande(
       totalAmount: totalAmount,
       pickupDay: orderController.selectedDay.value!,
       pickupTimeRange: orderController.selectedSlot.value!,

@@ -36,9 +36,9 @@ class ProductPriceDisplay extends StatelessWidget {
         unitPrice = product.salePrice > 0 ? product.salePrice : product.price;
       }
 
-      // Use temp quantity (what user is adjusting) instead of cart quantity
-      // This ensures the price updates immediately when incrementing/decrementing
-      final quantity = controller.getTempQuantity(product);
+      // Utiliser la quantité temporaire (ce que l'utilisateur ajuste) au lieu de la quantité du panier
+      // Cela garantit que le prix se met à jour immédiatement lors de l'incrémentation/décrémentation
+      final quantity = controller.obtenirQuantiteTemporaire(product);
 
       final totalPrice = unitPrice * quantity;
 

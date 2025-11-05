@@ -46,15 +46,15 @@ class ProductDetailScreen extends StatelessWidget {
             
             // Initialize temp quantity with the current cart item's quantity if not already set
             // This ensures quantity controls show the correct value
-            final currentTempQuantity = cartController.getTempQuantity(product);
+            final currentTempQuantity = cartController.obtenirQuantiteTemporaire(product);
             if (currentTempQuantity == 0) {
-              // Get the quantity from cart for this variation
-              final cartQuantity = cartController.getVariationQuantityInCart(
+              // Obtenir la quantité du panier pour cette variation
+              final cartQuantity = cartController.obtenirQuantiteVariationDansPanier(
                 product.id,
                 initialVariationId!,
               );
               if (cartQuantity > 0) {
-                cartController.updateTempQuantity(product, cartQuantity);
+                cartController.mettreAJourQuantiteTemporaire(product, cartQuantity);
               }
             }
           }

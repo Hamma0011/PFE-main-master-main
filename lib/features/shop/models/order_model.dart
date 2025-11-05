@@ -24,6 +24,7 @@ class OrderModel {
   final Etablissement? etablissement;
   final String etablissementId;
   final String? refusalReason;
+  final int? preparationTime;
   OrderModel(
       {required this.id,
       required this.userId,
@@ -41,7 +42,8 @@ class OrderModel {
       this.updatedAt,
       this.etablissement,
       required this.etablissementId,
-      this.refusalReason});
+      this.refusalReason,
+      this.preparationTime});
 
   // -------------------------
   // Computed / helper getters
@@ -109,6 +111,7 @@ class OrderModel {
     Etablissement? etablissement,
     String? etablissementId,
     String? refusalReason,
+    int? preparationTime,
   }) {
     return OrderModel(
       id: id ?? this.id,
@@ -128,6 +131,7 @@ class OrderModel {
       etablissement: etablissement ?? this.etablissement,
       etablissementId: etablissementId ?? this.etablissementId,
       refusalReason: refusalReason ?? this.refusalReason,
+      preparationTime: preparationTime ?? this.preparationTime,
     );
   }
 
@@ -154,6 +158,7 @@ class OrderModel {
       'updated_at': updatedAt?.toIso8601String(),
       'etablissement_id': etablissementId,
       'refusal_reason': refusalReason,
+      'preparation_time': preparationTime,
     };
   }
 
@@ -191,6 +196,9 @@ class OrderModel {
           : null,
       etablissementId: json['etablissement_id'] ?? '',
       refusalReason: json['refusal_reason'] as String?,
+      preparationTime: json['preparation_time'] != null
+          ? (json['preparation_time'] as num).toInt()
+          : null,
     );
   }
 

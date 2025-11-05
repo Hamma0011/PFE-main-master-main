@@ -14,6 +14,7 @@ import '../../../../common/widgets/list_tiles/settings_menu_tile.dart';
 import '../../../../common/widgets/list_tiles/user_profile_tile.dart';
 import '../../../../data/repositories/authentication/authentication_repository.dart';
 import '../../../../utils/constants/sizes.dart';
+import '../../../notification/screens/notifications_screen.dart';
 import '../../../shop/screens/product_reviews/list_produit_screen.dart';
 import '../../controllers/user_controller.dart';
 import '../address/address.dart';
@@ -109,7 +110,7 @@ class SettingsScreen extends StatelessWidget {
                     title: "Notifications",
                     subTitle: "Notifications de l'application",
                     icon: Iconsax.notification,
-                    onTap: () {}),
+                    onTap: () => Get.to(() => const NotificationsScreen())),
                 // TSettingsMenuTile(
                 //     title: "Sécurité du Compte",
                 //     subTitle: "Sécuriser mon compte",

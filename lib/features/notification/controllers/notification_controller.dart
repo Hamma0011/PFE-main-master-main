@@ -2,7 +2,9 @@ import 'package:get/get.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:flutter/material.dart';
 import '../../personalization/screens/brands/mon_etablissement_screen.dart';
+import '../../personalization/controllers/user_controller.dart';
 import '../../shop/screens/order/gerant_order_management_screen.dart';
+import '../../shop/screens/order/order.dart';
 import '../models/notification_model.dart';
 
 class NotificationController extends GetxController {
@@ -105,8 +107,18 @@ class NotificationController extends GetxController {
                                 messageLower.contains('order');
 
     if (isOrderNotification) {
-      // Rediriger vers la page de gestion des commandes pour le gérant
-      Get.to(() => const GerantOrderManagementScreen());
+      // Récupérer le rôle de l'utilisateur
+      final userController = UserController.instance;
+      final userRole = userController.userRole;
+
+      // Rediriger selon le rôle de l'utilisateur
+      if (userRole == 'Client') {
+        // Rediriger vers "Mes commandes" pour les clients
+        Get.to(() => const OrderScreen());
+      } else {
+        // Rediriger vers la page de gestion des commandes pour les gérants et admins
+        Get.to(() => const GerantOrderManagementScreen());
+      }
     } else if (n.etablissementId != null) {
       // Pour les autres notifications liées à un établissement,
       // naviguer vers MonEtablissementScreen

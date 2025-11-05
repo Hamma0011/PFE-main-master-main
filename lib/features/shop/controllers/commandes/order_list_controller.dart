@@ -21,15 +21,15 @@ class OrderListController extends GetxController
   }
 
   Future<void> loadOrders() async {
-    await orderController.fetchUserOrders();
+    await orderController.recupererCommandesUtilisateur();
   }
 
   List<OrderModel> getFilteredOrders(int index) {
     switch (index) {
       case 1:
-        return orderController.activeOrders;
+        return orderController.commandesActives;
       case 2:
-        return orderController.completedOrders;
+        return orderController.commandesTerminees;
       default:
         return orderController.orders;
     }
@@ -57,7 +57,7 @@ class OrderListController extends GetxController
     );
 
     if (confirmed == true) {
-      await orderController.cancelOrder(order.id);
+      await orderController.annulerCommande(order.id);
     }
   }
 
@@ -74,7 +74,7 @@ class OrderListController extends GetxController
 
     // Charger les articles de la commande dans le panier
     final cartController = CartController.instance;
-    cartController.loadOrderItemsToCart(order.items, order.id);
+    cartController.chargerArticlesCommandeDansPanier(order.items, order.id);
 
     // Naviguer vers le panier
     Get.to(() => const CartScreen());

@@ -122,7 +122,7 @@ class TCartItems extends StatelessWidget {
                       IconButton(
                         padding: EdgeInsets.zero,
                         constraints: const BoxConstraints(),
-                        onPressed: () => controller.removeFromCartDialog(index),
+                        onPressed: () => controller.dialogRetirerDuPanier(index),
                         icon: Icon(
                           Icons.delete_outline,
                           size: 20,
@@ -249,9 +249,9 @@ class TCartItems extends StatelessWidget {
         // Select the variation first
         variationController.selectVariation(sizePrice.size, sizePrice.price);
         
-        // Initialize temp quantity with the current cart item's quantity
-        // This ensures the quantity controls show the correct value
-        controller.updateTempQuantity(product, cartItem.quantity);
+        // Initialiser la quantité temporaire avec la quantité actuelle de l'article du panier
+        // Cela garantit que les contrôles de quantité affichent la bonne valeur
+        controller.mettreAJourQuantiteTemporaire(product, cartItem.quantity);
       }
     }
 
@@ -262,8 +262,8 @@ class TCartItems extends StatelessWidget {
           initialVariationId: cartItem.variationId,
           currentCartItemIndex: cartItemIndex,
           onVariationSelected: () {
-            // This callback will be called when user confirms the modification
-            controller.modifyCartVariation(product.id, cartItemIndex);
+            // Ce callback sera appelé lorsque l'utilisateur confirme la modification
+            controller.modifierVariationPanier(product.id, cartItemIndex);
           },
         ));
   }
@@ -285,10 +285,10 @@ class TCartItems extends StatelessWidget {
     final variationController = VariationController.instance;
     variationController.resetSelectedAttributes();
 
-    // Reset temp quantity for this product when adding a new variation
-    // This ensures the quantity starts fresh (at 0) for the new variation
+    // Réinitialiser la quantité temporaire pour ce produit lors de l'ajout d'une nouvelle variante
+    // Cela garantit que la quantité commence à zéro pour la nouvelle variante
     final controller = CartController.instance;
-    controller.resetTempQuantityForProduct(product.id);
+    controller.reinitialiserQuantiteTemporaireProduit(product.id);
 
     // Navigate to product detail
     Get.to(() => ProductDetailScreen(product: product));

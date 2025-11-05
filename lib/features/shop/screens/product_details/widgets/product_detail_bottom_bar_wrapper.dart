@@ -20,10 +20,10 @@ class ProductDetailBottomBarWrapper extends StatelessWidget {
   final VoidCallback? onVariationSelected;
 
   void _handleMainAction(CartController controller) {
-    if (!controller.canAddProduct(product)) return;
+    if (!controller.peutAjouterProduit(product)) return;
 
     if (product.productType == 'variable') {
-      final hasSelectedVariant = controller.hasSelectedVariant();
+      final hasSelectedVariant = controller.aVarianteSelectionnee();
       if (!hasSelectedVariant) {
         Get.snackbar(
           'Sélection requise',
@@ -35,52 +35,52 @@ class ProductDetailBottomBarWrapper extends StatelessWidget {
         return;
       }
 
-      // If this is a modification (edit mode), call the callback
+      // Si c'est une modification (mode édition), appeler le callback
       if (onVariationSelected != null) {
         onVariationSelected!();
         return;
       }
 
-      // Check if the SPECIFIC variation is in cart (for add mode)
+      // Vérifier si la variation SPÉCIFIQUE est dans le panier (pour le mode ajout)
       final selectedSize = controller.variationController.selectedSize.value;
       if (selectedSize.isNotEmpty) {
         final variationQuantity =
-            controller.getVariationQuantityInCart(product.id, selectedSize);
+            controller.obtenirQuantiteVariationDansPanier(product.id, selectedSize);
         if (variationQuantity > 0) {
-          // This specific variation is already in cart, navigate to cart
+          // Cette variation spécifique est déjà dans le panier, naviguer vers le panier
           Get.to(() => const CartScreen());
           return;
         }
       }
     } else {
-      // For single products, check if product is in cart
-      final quantity = controller.getProductQuantityInCart(product.id);
+      // Pour les produits simples, vérifier si le produit est dans le panier
+      final quantity = controller.obtenirQuantiteProduitDansPanier(product.id);
       if (quantity > 0) {
         Get.to(() => const CartScreen());
         return;
       }
     }
 
-    // Add new item (either new variation or new product)
-    // Use addToCart which handles the logic properly
-    controller.addToCart(product);
+    // Ajouter un nouvel article (soit une nouvelle variation soit un nouveau produit)
+    // Utiliser ajouterAuPanier qui gère la logique correctement
+    controller.ajouterAuPanier(product);
   }
 
   void _handleIncrement(CartController controller) {
-    if (!controller.canAddProduct(product)) return;
-    if (product.productType == 'single' || controller.hasSelectedVariant()) {
-      // Get current temp quantity and increment it
-      final currentQuantity = controller.getTempQuantity(product);
-      controller.updateTempQuantity(product, currentQuantity + 1);
+    if (!controller.peutAjouterProduit(product)) return;
+    if (product.productType == 'single' || controller.aVarianteSelectionnee()) {
+      // Obtenir la quantité temporaire actuelle et l'incrémenter
+      final currentQuantity = controller.obtenirQuantiteTemporaire(product);
+      controller.mettreAJourQuantiteTemporaire(product, currentQuantity + 1);
     }
   }
 
   void _handleDecrement(CartController controller) {
-    if (product.productType == 'single' || controller.hasSelectedVariant()) {
-      // Get current temp quantity and decrement it
-      final currentQuantity = controller.getTempQuantity(product);
+    if (product.productType == 'single' || controller.aVarianteSelectionnee()) {
+      // Obtenir la quantité temporaire actuelle et la décrémenter
+      final currentQuantity = controller.obtenirQuantiteTemporaire(product);
       if (currentQuantity > 0) {
-        controller.updateTempQuantity(product, currentQuantity - 1);
+        controller.mettreAJourQuantiteTemporaire(product, currentQuantity - 1);
       }
     }
   }

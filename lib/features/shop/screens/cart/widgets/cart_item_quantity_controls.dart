@@ -47,7 +47,7 @@ class CartItemQuantityControls extends StatelessWidget {
             /// Decrement Button
             GestureDetector(
               onTap: quantity > 0
-                  ? () => controller.removeOneFromCart(cartItem)
+                  ? () => controller.retirerUnDuPanier(cartItem)
                   : null,
               child: Container(
                 width: 28,
@@ -83,7 +83,7 @@ class CartItemQuantityControls extends StatelessWidget {
 
             /// Increment Button
             GestureDetector(
-              onTap: () => controller.addOneToCart(cartItem),
+              onTap: () => controller.ajouterUnAuPanier(cartItem),
               child: Container(
                 width: 28,
                 height: 28,

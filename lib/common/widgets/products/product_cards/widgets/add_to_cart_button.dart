@@ -24,7 +24,7 @@ class ProductCardAddToCartButton extends StatelessWidget {
 
     return Obx(() {
       final productQuantityInCart =
-          cartController.getProductQuantityInCart(product.id);
+          cartController.obtenirQuantiteProduitDansPanier(product.id);
 
       return Container(
         height: 32, // Slightly larger for detail page
@@ -133,7 +133,7 @@ class ProductCardAddToCartButton extends StatelessWidget {
 
   void _handleAddToCart(CartController cartController) {
     // Vérifier si on peut ajouter ce produit
-    if (!cartController.canAddProduct(product)) return;
+    if (!cartController.peutAjouterProduit(product)) return;
     
     // Pour les produits variables, rediriger vers la page de détail pour choisir la taille
     if (!isSingleProduct) {
@@ -143,14 +143,14 @@ class ProductCardAddToCartButton extends StatelessWidget {
     
     // Pour les produits simples, ajouter directement au panier
     if (isSingleProduct) {
-      final cartItem = cartController.productToCartItem(product, 1);
-      cartController.addOneToCart(cartItem);
+      final cartItem = cartController.produitVersArticlePanier(product, 1);
+      cartController.ajouterUnAuPanier(cartItem);
     }
   }
 
   void _handleIncrement(CartController cartController) {
     // Vérifier si on peut ajouter ce produit
-    if (!cartController.canAddProduct(product)) return;
+    if (!cartController.peutAjouterProduit(product)) return;
     
     // Pour les produits variables, rediriger vers la page de détail pour choisir la taille
     if (!isSingleProduct) {
@@ -160,15 +160,15 @@ class ProductCardAddToCartButton extends StatelessWidget {
     
     // Pour les produits simples, ajouter directement au panier
     if (isSingleProduct) {
-      final cartItem = cartController.productToCartItem(product, 1);
-      cartController.addOneToCart(cartItem);
+      final cartItem = cartController.produitVersArticlePanier(product, 1);
+      cartController.ajouterUnAuPanier(cartItem);
     }
   }
 
   void _handleDecrement(CartController cartController) {
     if (isSingleProduct) {
-      final cartItem = cartController.productToCartItem(product, 1);
-      cartController.removeOneFromCart(cartItem);
+      final cartItem = cartController.produitVersArticlePanier(product, 1);
+      cartController.retirerUnDuPanier(cartItem);
     }
   }
 }

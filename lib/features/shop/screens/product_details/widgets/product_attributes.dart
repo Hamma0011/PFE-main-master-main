@@ -39,7 +39,7 @@ class TProductAttributes extends StatelessWidget {
 
       // ✅ Ensemble des variations déjà ajoutées au panier
       final variationsInCartSet =
-          cartController.getVariationsInCartSet(product.id);
+          cartController.obtenirVariationsDansPanierSet(product.id);
 
       return Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -63,7 +63,7 @@ class TProductAttributes extends StatelessWidget {
               
               // Obtenir la quantité de cette variation dans le panier
               final variationQuantity = isInCart
-                  ? cartController.getVariationQuantityInCart(product.id, sp.size)
+                  ? cartController.obtenirQuantiteVariationDansPanier(product.id, sp.size)
                   : 0;
 
               return ChoiceChip(

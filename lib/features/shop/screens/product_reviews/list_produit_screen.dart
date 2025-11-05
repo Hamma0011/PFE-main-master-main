@@ -9,6 +9,7 @@ import '../../../../utils/produit_helper.dart';
 import '../../../../utils/popups/loaders.dart';
 import '../../../personalization/controllers/user_controller.dart';
 import '../../controllers/product/produit_controller.dart';
+import '../../controllers/category_controller.dart';
 import '../../models/produit_model.dart';
 import 'add_produit_screen.dart';
 import '../../models/statut_etablissement_model.dart';
@@ -22,6 +23,7 @@ class ListProduitScreen extends StatefulWidget {
 
 class _ListProduitScreenState extends State<ListProduitScreen> {
   late ProduitController controller;
+  late CategoryController categoryController;
   final etsController = EtablissementController.instance;
   bool _accessDenied = false;
   String _deniedReason = '';
@@ -37,6 +39,14 @@ class _ListProduitScreenState extends State<ListProduitScreen> {
       Get.put(ProduitController());
     }
     controller = Get.find<ProduitController>();
+
+    // Initialiser le contrôleur de catégories
+    if (!Get.isRegistered<CategoryController>()) {
+      Get.put(CategoryController());
+    }
+    categoryController = Get.find<CategoryController>();
+    categoryController.fetchCategories();
+
     _guardAccessAndLoad();
   }
 
@@ -96,12 +106,12 @@ class _ListProduitScreenState extends State<ListProduitScreen> {
               ),
             ))
           : Column(
-        children: [
-          _buildSearchBar(),
-          _buildFilterChips(),
-          Expanded(child: _buildBody()),
-        ],
-      ),
+              children: [
+                _buildSearchBar(),
+                _buildFilterChips(),
+                Expanded(child: _buildBody()),
+              ],
+            ),
       floatingActionButton: _accessDenied ? null : _buildFloatingActionButton(),
     );
   }
@@ -358,9 +368,9 @@ class _ListProduitScreenState extends State<ListProduitScreen> {
       ),
       child: ClipRRect(
         borderRadius: BorderRadius.circular(12),
-        child: produit.imageUrl != null && produit.imageUrl!.isNotEmpty
+        child: produit.imageUrl.isNotEmpty
             ? Image.network(
-                produit.imageUrl!,
+                produit.imageUrl,
                 fit: BoxFit.cover,
                 errorBuilder: (context, error, stackTrace) {
                   return _buildDefaultProduitIcon();
@@ -405,6 +415,9 @@ class _ListProduitScreenState extends State<ListProduitScreen> {
     final userController = Get.find<UserController>();
     final bool isAdmin = userController.user.value.role == 'Admin';
 
+    // Obtenir le nom de la catégorie
+    String categoryName = _getCategoryName(produit.categoryId);
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -418,6 +431,24 @@ class _ListProduitScreenState extends State<ListProduitScreen> {
               fontStyle: FontStyle.italic,
             ),
           ),
+
+        // AFFICHAGE DE LA CATÉGORIE
+        if (categoryName.isNotEmpty) ...[
+          const SizedBox(height: 2),
+          Row(
+            children: [
+              const SizedBox(width: 4),
+              Text(
+                '$categoryName',
+                style: TextStyle(
+                  fontSize: 12,
+                  color: Colors.blue[600],
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+            ],
+          ),
+        ],
 
         // AFFICHAGE DES PRIX AVEC PROMOTION SI APPLICABLE
         _buildPriceDisplay(produit),
@@ -868,7 +899,8 @@ class _ListProduitScreenState extends State<ListProduitScreen> {
                     border: OutlineInputBorder(),
                     hintText: 'Entrez la quantité',
                   ),
-                  keyboardType: TextInputType.numberWithOptions(decimal: false, signed: false),
+                  keyboardType: TextInputType.numberWithOptions(
+                      decimal: false, signed: false),
                   validator: (value) {
                     if (value == null || value.isEmpty) {
                       return 'Veuillez entrer une quantité';
@@ -899,12 +931,14 @@ class _ListProduitScreenState extends State<ListProduitScreen> {
 
                 final newStock = int.tryParse(quantiteController.text);
                 if (newStock == null) {
-                  TLoaders.errorSnackBar(message: 'Veuillez entrer un nombre valide');
+                  TLoaders.errorSnackBar(
+                      message: 'Veuillez entrer un nombre valide');
                   return;
                 }
 
                 if (newStock < 0) {
-                  TLoaders.errorSnackBar(message: 'La quantité ne peut pas être négative');
+                  TLoaders.errorSnackBar(
+                      message: 'La quantité ne peut pas être négative');
                   return;
                 }
 
@@ -931,5 +965,18 @@ class _ListProduitScreenState extends State<ListProduitScreen> {
         );
       },
     );
+  }
+
+  /// Obtenir le nom de la catégorie à partir de son ID
+  String _getCategoryName(String categoryId) {
+    if (categoryId.isEmpty) return '';
+
+    try {
+      final category = categoryController.allCategories
+          .firstWhere((cat) => cat.id == categoryId);
+      return category.name;
+    } catch (e) {
+      return '';
+    }
   }
 }

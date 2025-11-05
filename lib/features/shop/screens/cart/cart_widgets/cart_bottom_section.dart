@@ -63,28 +63,60 @@ class _TotalPrice extends StatelessWidget {
   final CartController controller;
   const _TotalPrice({required this.controller});
 
+  String _formatPreparationTime(int minutes) {
+    if (minutes == 0) {
+      return 'Prêt immédiatement';
+    } else if (minutes == 1) {
+      return '1 minute';
+    } else {
+      return '$minutes minutes';
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
-    return Obx(() => Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text(
-              'Total',
-              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                    color: Colors.grey.shade600,
-                  ),
-            ),
-            const SizedBox(height: 4),
-            Text(
-              '${controller.totalCartPrice.value.toStringAsFixed(2)} DT',
-              style: Theme.of(context)
-                  .textTheme
-                  .headlineSmall
-                  ?.copyWith(fontWeight: FontWeight.w700),
+    return Obx(() {
+      final preparationTime = controller.calculerTempsPreparation();
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(
+            'Total',
+            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                  color: Colors.grey.shade600,
+                ),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            '${controller.totalCartPrice.value.toStringAsFixed(2)} DT',
+            style: Theme.of(context)
+                .textTheme
+                .headlineSmall
+                ?.copyWith(fontWeight: FontWeight.w700),
+          ),
+          if (preparationTime > 0) ...[
+            const SizedBox(height: 8),
+            Row(
+              children: [
+                Icon(
+                  Icons.access_time,
+                  size: 16,
+                  color: Colors.grey.shade600,
+                ),
+                const SizedBox(width: 4),
+                Text(
+                  _formatPreparationTime(preparationTime),
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        color: Colors.grey.shade600,
+                      ),
+                ),
+              ],
             ),
           ],
-        ));
+        ],
+      );
+    });
   }
 }
 

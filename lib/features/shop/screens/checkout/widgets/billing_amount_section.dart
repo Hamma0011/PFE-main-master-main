@@ -7,10 +7,21 @@ import '../../../controllers/product/panier_controller.dart';
 class TBillingAmountSection extends StatelessWidget {
   const TBillingAmountSection({super.key});
 
+  String _formatPreparationTime(int minutes) {
+    if (minutes == 0) {
+      return 'Prêt immédiatement';
+    } else if (minutes == 1) {
+      return '1 minute';
+    } else {
+      return '$minutes minutes';
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final cartController = CartController.instance;
     final subTotal = cartController.totalCartPrice.value;
+    final preparationTime = cartController.calculerTempsPreparation();
     return Column(
       children: [
         /// Subtotal
@@ -67,6 +78,36 @@ class TBillingAmountSection extends StatelessWidget {
         const SizedBox(
           height: AppSizes.spaceBtwItems / 2,
         ),
+
+        /// Temps de préparation
+        if (preparationTime > 0)
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Row(
+                children: [
+                  Icon(
+                    Icons.access_time,
+                    size: 16,
+                    color: Theme.of(context).textTheme.bodyMedium?.color,
+                  ),
+                  const SizedBox(width: 4),
+                  Text(
+                    'Temps de préparation',
+                    style: Theme.of(context).textTheme.bodyMedium,
+                  ),
+                ],
+              ),
+              Text(
+                _formatPreparationTime(preparationTime),
+                style: Theme.of(context).textTheme.bodyMedium,
+              ),
+            ],
+          ),
+        if (preparationTime > 0)
+          const SizedBox(
+            height: AppSizes.spaceBtwItems / 2,
+          ),
 
         /// Order total fee
         Row(

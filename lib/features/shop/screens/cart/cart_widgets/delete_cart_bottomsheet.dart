@@ -65,7 +65,7 @@ class DeleteAllBottomSheet extends StatelessWidget {
               Expanded(
                 child: ElevatedButton(
                   onPressed: () {
-                    controller.clearCart();
+                    controller.viderPanier();
                     Get.back();
                     TLoaders.customToast(message: 'Panier vidé');
                   },
