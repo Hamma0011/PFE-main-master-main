@@ -25,6 +25,7 @@ class OrderModel {
   final String etablissementId;
   final String? refusalReason;
   final int? preparationTime;
+  final String? clientArrivalTime; // Format HH:mm:ss
   OrderModel(
       {required this.id,
       required this.userId,
@@ -43,7 +44,8 @@ class OrderModel {
       this.etablissement,
       required this.etablissementId,
       this.refusalReason,
-      this.preparationTime});
+      this.preparationTime,
+      this.clientArrivalTime});
 
   // -------------------------
   // Computed / helper getters
@@ -112,6 +114,7 @@ class OrderModel {
     String? etablissementId,
     String? refusalReason,
     int? preparationTime,
+    String? clientArrivalTime,
   }) {
     return OrderModel(
       id: id ?? this.id,
@@ -132,6 +135,7 @@ class OrderModel {
       etablissementId: etablissementId ?? this.etablissementId,
       refusalReason: refusalReason ?? this.refusalReason,
       preparationTime: preparationTime ?? this.preparationTime,
+      clientArrivalTime: clientArrivalTime ?? this.clientArrivalTime,
     );
   }
 
@@ -159,6 +163,7 @@ class OrderModel {
       'etablissement_id': etablissementId,
       'refusal_reason': refusalReason,
       'preparation_time': preparationTime,
+      'client_arrival_time': clientArrivalTime,
     };
   }
 
@@ -199,6 +204,7 @@ class OrderModel {
       preparationTime: json['preparation_time'] != null
           ? (json['preparation_time'] as num).toInt()
           : null,
+      clientArrivalTime: json['client_arrival_time'] as String?,
     );
   }
 
@@ -229,6 +235,7 @@ class OrderModel {
       paymentMethod: '',
       items: [],
       etablissementId: '',
+      clientArrivalTime: null,
     );
   }
 

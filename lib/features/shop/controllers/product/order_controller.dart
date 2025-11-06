@@ -1,7 +1,12 @@
+import 'dart:async';
+import 'dart:convert';
 import 'package:caferesto/features/personalization/controllers/user_controller.dart';
+import 'package:caferesto/features/personalization/models/address_model.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'package:http/http.dart' as http;
 
 import '../../../../common/widgets/success_screen/success_screen.dart';
 import '../../../../data/repositories/authentication/authentication_repository.dart';
@@ -475,6 +480,8 @@ class OrderController extends GetxController {
     String? pickupDay,
     String? pickupTimeRange,
     String? addressId,
+    bool creneauAutoDefini =
+        false, // Indique si le créneau a été défini automatiquement
   }) async {
     try {
       TFullScreenLoader.openLoadingDialog(
@@ -518,6 +525,50 @@ class OrderController extends GetxController {
         final preparationTime = _calculerTempsPreparationCommande(
             cartController.cartItems.toList());
 
+        // Si pas de créneau horaire défini OU si créneau auto-défini, calculer l'heure d'arrivée réelle du client
+        String? clientArrivalTime;
+        debugPrint('🔍 Vérification des créneaux horaires:');
+        debugPrint('   - pickupDateTime: $pickupDateTime');
+        debugPrint('   - pickupDay: $pickupDay');
+        debugPrint('   - pickupTimeRange: $pickupTimeRange');
+        debugPrint('   - creneauAutoDefini: $creneauAutoDefini');
+
+        // Calculer l'heure d'arrivée si :
+        // 1. Aucun créneau n'est défini (null)
+        // 2. OU si le créneau a été défini automatiquement (pas choisi manuellement par l'utilisateur)
+        final shouldCalculateArrivalTime = (pickupDateTime == null ||
+                pickupDay == null ||
+                pickupTimeRange == null) ||
+            creneauAutoDefini;
+
+        if (shouldCalculateArrivalTime) {
+          debugPrint('🔄 Calcul de l\'heure d\'arrivée réelle...');
+          debugPrint(
+              '   - Raison: ${(pickupDateTime == null || pickupDay == null || pickupTimeRange == null) ? "Créneau non défini" : "Créneau auto-défini"}');
+          debugPrint(
+              '📍 Adresse client - Latitude: ${selectedAddress.latitude}, Longitude: ${selectedAddress.longitude}');
+          // Calculer l'heure d'arrivée réelle via GraphHopper
+          clientArrivalTime = await _calculerHeureArriveeReelle(
+            etablissementId: etablissementId,
+            clientAddress: selectedAddress,
+          );
+          if (clientArrivalTime != null) {
+            debugPrint(
+                '✅ Heure d\'arrivée calculée et prête à être enregistrée: $clientArrivalTime');
+          } else {
+            debugPrint(
+                '⚠️ Impossible de calculer l\'heure d\'arrivée, la commande sera enregistrée sans heure d\'arrivée');
+            debugPrint('   Raisons possibles:');
+            debugPrint('   - Coordonnées GPS manquantes ou invalides');
+            debugPrint('   - Clé API GraphHopper non configurée');
+            debugPrint('   - Erreur lors de l\'appel à l\'API GraphHopper');
+            debugPrint('   - Établissement introuvable');
+          }
+        } else {
+          debugPrint(
+              'ℹ️ Créneau horaire choisi manuellement, pas de calcul d\'heure d\'arrivée nécessaire');
+        }
+
         // Créer une nouvelle commande
         final order = OrderModel(
           id: '', // Laisser la base de données générer l'UUID
@@ -536,7 +587,26 @@ class OrderController extends GetxController {
           createdAt: DateTime.now(),
           updatedAt: DateTime.now(),
           preparationTime: preparationTime,
+          clientArrivalTime:
+              clientArrivalTime, // Heure d'arrivée réelle calculée via GraphHopper
         );
+
+        // Log de débogage pour l'heure d'arrivée qui sera enregistrée
+        debugPrint(
+            '═══════════════════════════════════════════════════════════');
+        debugPrint('📦 CRÉATION DE COMMANDE');
+        debugPrint(
+            '═══════════════════════════════════════════════════════════');
+        debugPrint('🆔 ID Établissement: $etablissementId');
+        debugPrint('💰 Montant total: ${totalAmount.toStringAsFixed(2)} DT');
+        if (clientArrivalTime != null) {
+          debugPrint(
+              '🕐 Heure d\'arrivée (client_arrival_time): $clientArrivalTime');
+        } else {
+          debugPrint('🕐 Heure d\'arrivée: Non définie');
+        }
+        debugPrint(
+            '═══════════════════════════════════════════════════════════');
 
         // Diminuer le stock des produits stockables commandés AVANT de sauvegarder la commande
         try {
@@ -1003,6 +1073,205 @@ class OrderController extends GetxController {
       debugPrint('❌ Erreur lors de la notification au gérant: $e');
       debugPrint('Stack trace: $stackTrace');
       // Ne pas lancer l'erreur pour ne pas bloquer le processus de commande
+    }
+  }
+
+  /// Calcule l'heure d'arrivée réelle du client en utilisant GraphHopper API
+  /// Retourne l'heure au format HH:mm:ss (type TIME) ou null si le calcul échoue
+  Future<String?> _calculerHeureArriveeReelle({
+    required String etablissementId,
+    required AddressModel clientAddress,
+  }) async {
+    try {
+      debugPrint('🚀 [DEBUG] Début du calcul de l\'heure d\'arrivée réelle');
+      debugPrint('   - Établissement ID: $etablissementId');
+      debugPrint('   - Adresse client ID: ${clientAddress.id}');
+
+      // Récupérer les coordonnées de l'établissement
+      debugPrint('   - Récupération des coordonnées de l\'établissement...');
+      final etablissementCoords =
+          await _obtenirCoordonneesEtablissement(etablissementId);
+      if (etablissementCoords == null) {
+        debugPrint(
+            '❌ [DEBUG] Impossible de récupérer les coordonnées de l\'établissement');
+        return null;
+      }
+      debugPrint(
+          '   ✅ Coordonnées établissement récupérées: ${etablissementCoords['latitude']}, ${etablissementCoords['longitude']}');
+
+      // Vérifier que l'adresse du client a des coordonnées
+      final clientLat = clientAddress.latitude ?? 0.0;
+      final clientLng = clientAddress.longitude ?? 0.0;
+      final restoLat = etablissementCoords['latitude']!;
+      final restoLng = etablissementCoords['longitude']!;
+
+      debugPrint('   - Coordonnées client: $clientLat, $clientLng');
+      debugPrint('   - Coordonnées établissement: $restoLat, $restoLng');
+
+      if (clientLat == 0.0 ||
+          clientLng == 0.0 ||
+          restoLat == 0.0 ||
+          restoLng == 0.0) {
+        debugPrint(
+            '❌ [DEBUG] Coordonnées invalides pour le calcul de l\'itinéraire');
+        debugPrint(
+            '   - clientLat: $clientLat (${clientLat == 0.0 ? "INVALIDE" : "OK"})');
+        debugPrint(
+            '   - clientLng: $clientLng (${clientLng == 0.0 ? "INVALIDE" : "OK"})');
+        debugPrint(
+            '   - restoLat: $restoLat (${restoLat == 0.0 ? "INVALIDE" : "OK"})');
+        debugPrint(
+            '   - restoLng: $restoLng (${restoLng == 0.0 ? "INVALIDE" : "OK"})');
+        return null;
+      }
+
+      // Récupérer la clé API GraphHopper
+      debugPrint('   - Récupération de la clé API GraphHopper...');
+      String apiKey = '';
+      try {
+        apiKey = dotenv.env['GRAPHHOPPER_API_KEY'] ?? '';
+        debugPrint(
+            '   - Clé API récupérée depuis dotenv: ${apiKey.isNotEmpty ? "OK (${apiKey.substring(0, 5)}...)" : "VIDE"}');
+      } catch (e) {
+        debugPrint('   ⚠️ Erreur lors de la récupération de la clé API: $e');
+        try {
+          await dotenv.load();
+          apiKey = dotenv.env['GRAPHHOPPER_API_KEY'] ?? '';
+          debugPrint(
+              '   - Clé API chargée après dotenv.load(): ${apiKey.isNotEmpty ? "OK" : "VIDE"}');
+        } catch (loadError) {
+          debugPrint('   ❌ Erreur lors du chargement de dotenv: $loadError');
+        }
+      }
+
+      if (apiKey.isEmpty) {
+        debugPrint('❌ [DEBUG] Clé API GraphHopper non configurée ou vide');
+        return null;
+      }
+      debugPrint('   ✅ Clé API GraphHopper disponible');
+
+      // Appeler l'API GraphHopper pour calculer le temps de trajet
+      debugPrint('   - Appel de l\'API GraphHopper...');
+      final url = Uri.parse(
+        'https://graphhopper.com/api/1/route?point=$restoLat,$restoLng&point=$clientLat,$clientLng&vehicle=car&points_encoded=false&key=$apiKey',
+      );
+      debugPrint(
+          '   - URL GraphHopper: ${url.toString().replaceAll(apiKey, '***')}');
+
+      final response = await http.get(url).timeout(
+        const Duration(seconds: 10),
+        onTimeout: () {
+          debugPrint('❌ [DEBUG] Timeout lors de l\'appel à GraphHopper');
+          throw TimeoutException('Request timeout');
+        },
+      );
+
+      debugPrint('   - Réponse GraphHopper: Status ${response.statusCode}');
+      if (response.statusCode != 200) {
+        debugPrint('❌ [DEBUG] Erreur API GraphHopper: ${response.statusCode}');
+        debugPrint('   - Body: ${response.body}');
+        return null;
+      }
+
+      // Parser la réponse
+      Map<String, dynamic> data;
+      try {
+        data = jsonDecode(response.body) as Map<String, dynamic>;
+      } catch (e) {
+        debugPrint('❌ Erreur lors du parsing JSON: $e');
+        return null;
+      }
+
+      if (data['paths'] == null || (data['paths'] as List).isEmpty) {
+        debugPrint('⚠️ Aucun chemin retourné par l\'API GraphHopper');
+        return null;
+      }
+
+      final path = (data['paths'] as List).first as Map<String, dynamic>;
+      final time =
+          (path['time'] as num?)?.toDouble() ?? 0.0; // Temps en millisecondes
+
+      if (time <= 0) {
+        debugPrint('⚠️ Temps de trajet invalide: $time');
+        return null;
+      }
+
+      // Calculer l'heure d'arrivée (heure actuelle + temps de trajet)
+      final tempsTrajetMinutes =
+          (time / 60000).round(); // Convertir millisecondes en minutes
+      final heureActuelle = DateTime.now();
+      final heureArriveeSansDecalage =
+          heureActuelle.add(Duration(minutes: tempsTrajetMinutes));
+
+      // Ajouter +1 heure pour s'adapter à l'heure locale de Tunis (UTC+1)
+      final heureArrivee =
+          heureArriveeSansDecalage.add(const Duration(hours: 1));
+
+      // Formater l'heure au format HH:mm:ss (type TIME)
+      final formattedTime =
+          '${heureArrivee.hour.toString().padLeft(2, '0')}:${heureArrivee.minute.toString().padLeft(2, '0')}:${heureArrivee.second.toString().padLeft(2, '0')}';
+      final formattedTimeSansDecalage =
+          '${heureArriveeSansDecalage.hour.toString().padLeft(2, '0')}:${heureArriveeSansDecalage.minute.toString().padLeft(2, '0')}:${heureArriveeSansDecalage.second.toString().padLeft(2, '0')}';
+
+      // Logs de débogage détaillés
+      debugPrint('═══════════════════════════════════════════════════════════');
+      debugPrint('🕐 CALCUL HEURE D\'ARRIVÉE RÉELLE (GraphHopper)');
+      debugPrint('═══════════════════════════════════════════════════════════');
+      debugPrint('📍 Coordonnées client: $clientLat, $clientLng');
+      debugPrint('📍 Coordonnées établissement: $restoLat, $restoLng');
+      debugPrint(
+          '⏱️  Temps de trajet: $tempsTrajetMinutes minutes (${(time / 1000).toStringAsFixed(0)} secondes)');
+      debugPrint(
+          '🕐 Heure actuelle: ${heureActuelle.hour.toString().padLeft(2, '0')}:${heureActuelle.minute.toString().padLeft(2, '0')}:${heureActuelle.second.toString().padLeft(2, '0')}');
+      debugPrint(
+          '🕐 Heure d\'arrivée (sans décalage): $formattedTimeSansDecalage');
+      debugPrint('🕐 Heure d\'arrivée (+1h Tunis): $formattedTime');
+      debugPrint('📝 Format TIME pour DB: $formattedTime');
+      debugPrint('═══════════════════════════════════════════════════════════');
+
+      return formattedTime;
+    } catch (e) {
+      debugPrint('❌ Erreur lors du calcul de l\'heure d\'arrivée réelle: $e');
+      return null;
+    }
+  }
+
+  /// Récupère les coordonnées GPS de l'établissement
+  /// Retourne un Map avec 'latitude' et 'longitude' si disponible, null sinon
+  Future<Map<String, double>?> _obtenirCoordonneesEtablissement(
+      String etablissementId) async {
+    try {
+      final response = await _db
+          .from('etablissements')
+          .select('latitude, longitude')
+          .eq('id', etablissementId)
+          .maybeSingle();
+
+      if (response == null) {
+        debugPrint('⚠️ Établissement non trouvé: $etablissementId');
+        return null;
+      }
+
+      final latitude = (response['latitude'] as num?)?.toDouble();
+      final longitude = (response['longitude'] as num?)?.toDouble();
+
+      if (latitude == null ||
+          longitude == null ||
+          latitude == 0.0 ||
+          longitude == 0.0) {
+        debugPrint('⚠️ Coordonnées GPS de l\'établissement non disponibles');
+        return null;
+      }
+
+      debugPrint('📍 Coordonnées établissement : $latitude, $longitude');
+      return {
+        'latitude': latitude,
+        'longitude': longitude,
+      };
+    } catch (e) {
+      debugPrint(
+          '❌ Erreur lors de la récupération des coordonnées de l\'établissement: $e');
+      return null;
     }
   }
 }

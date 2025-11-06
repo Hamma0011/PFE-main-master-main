@@ -444,6 +444,7 @@ class CheckoutScreen extends StatelessWidget {
     final etablissementId = cartController.cartItems.first.etablissementId;
 
     // Vérifier créneau - si aucun n'est sélectionné, calculer un créneau par défaut
+    bool creneauAutoDefini = false;
     if (orderController.selectedSlot.value == null ||
         orderController.selectedDay.value == null) {
       // Calculer le temps de préparation de la commande
@@ -464,6 +465,9 @@ class CheckoutScreen extends StatelessWidget {
         );
         return;
       }
+
+      // Marquer que le créneau a été défini automatiquement
+      creneauAutoDefini = true;
 
       // Afficher un message informatif
       TLoaders.successSnackBar(
@@ -510,6 +514,7 @@ class CheckoutScreen extends StatelessWidget {
       pickupDateTime: pickupDateTime,
       etablissementId: etablissementId,
       addressId: selectedAddressId, // plus de ""
+      creneauAutoDefini: creneauAutoDefini, // Passer l'info si le créneau a été auto-défini
     );
   }
 }

@@ -43,18 +43,29 @@ class _DeliveryMapViewState extends State<DeliveryMapView> {
     // Vérifier que l'ordre a les données nécessaires
     if (widget.order.etablissement == null &&
         widget.order.etablissementId.isNotEmpty) {
-      // Charger l'établissement depuis Supabase
-      _loadEtablissement();
+      // Charger l'établissement depuis Supabase et attendre qu'il soit chargé
+      _loadEtablissement().then((_) {
+        // Appeler _fetchRoute() seulement après que l'établissement soit chargé
+        if (mounted && !_isDisposed) {
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            if (mounted && !_isDisposed) {
+              _fetchRoute();
+            }
+          });
+        }
+      });
     } else if (widget.order.etablissement == null) {
       debugPrint(
           'Erreur: établissement null et etablissementId vide dans DeliveryMapView');
       return;
+    } else {
+      // Si l'établissement est déjà présent, appeler _fetchRoute() directement
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted && !_isDisposed) {
+          _fetchRoute();
+        }
+      });
     }
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (mounted && !_isDisposed) {
-        _fetchRoute();
-      }
-    });
   }
 
   /// Charger l'établissement depuis Supabase si non présent dans l'ordre
@@ -77,8 +88,7 @@ class _DeliveryMapViewState extends State<DeliveryMapView> {
           _loadedEtablissement = Etablissement.fromJson(response);
           _isLoadingEtablissement = false;
         });
-        // Recharger l'itinéraire maintenant que l'établissement est chargé
-        _fetchRoute();
+        // _fetchRoute() sera appelé dans initState() après le chargement
       } else {
         if (mounted && !_isDisposed) {
           setState(() {
@@ -293,7 +303,15 @@ class _DeliveryMapViewState extends State<DeliveryMapView> {
 
     try {
       final etablissement = _etablissement;
+      
+      // Si l'établissement est null mais qu'on est en train de le charger, attendre
       if (etablissement == null) {
+        if (_isLoadingEtablissement) {
+          // Ne pas afficher d'erreur si on est en train de charger
+          debugPrint('⏳ En attente du chargement de l\'établissement...');
+          return;
+        }
+        
         if (!_isDisposed && mounted) {
           await _showSnack("Erreur", "Établissement non disponible.");
         }
