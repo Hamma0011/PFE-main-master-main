@@ -39,7 +39,8 @@ class UserController extends GetxController {
     // Charger l'utilisateur immédiatement si une session existe déjà
     final currentSession = Supabase.instance.client.auth.currentSession;
     if (currentSession != null) {
-      fetchUserRecord();
+      // Charger les données de manière synchrone au démarrage
+      _loadUserDataSync();
     }
 
     // Listener sur l'état de connexion Supabase pour les changements futurs
@@ -54,6 +55,13 @@ class UserController extends GetxController {
     });
   }
 
+  /// Charger les données utilisateur de manière synchrone au démarrage
+  void _loadUserDataSync() {
+    // Ne pas initialiser avec empty() si on a une session
+    // Attendre que fetchUserRecord() charge les vraies données
+    fetchUserRecord();
+  }
+
   /// Charger les infos utilisateur
   Future<void> fetchUserRecord() async {
     try {
@@ -61,8 +69,9 @@ class UserController extends GetxController {
       final userData = await userRepository.fetchUserDetails();
 
       if (userData != null) {
-        // Ne mettre à jour que si on a réussi à récupérer les données
+        // Mettre à jour avec les données de la base de données
         user(userData);
+        debugPrint("✅ Utilisateur chargé depuis la base de données - Rôle: ${userData.role}");
       } else {
         // Si l'utilisateur n'existe pas en base, ne pas écraser avec un utilisateur vide
         // Garder l'utilisateur actuel si disponible

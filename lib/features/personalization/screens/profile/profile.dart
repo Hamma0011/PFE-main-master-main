@@ -100,13 +100,18 @@ class ProfileScreen extends GetView<UserController> {
         },
       ),
       body: Obx(() {
-        // si le profil est en chargement
-        if (controller.profileLoading.value) {
+        // Si le profil est en chargement, afficher un indicateur
+        if (controller.profileLoading.value && controller.user.value.id.isEmpty) {
           return const Center(child: CircularProgressIndicator());
         }
 
         // Charger utilisateur courant
         final user = controller.user.value;
+        
+        // Si l'utilisateur n'est pas encore chargé, ne pas afficher
+        if (user.id.isEmpty) {
+          return const Center(child: CircularProgressIndicator());
+        }
 
         // Déterminer l'image de profil
         final profileImage =

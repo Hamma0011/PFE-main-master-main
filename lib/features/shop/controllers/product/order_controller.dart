@@ -482,6 +482,10 @@ class OrderController extends GetxController {
     bool creneauAutoDefini =
         false, // Indique si le créneau a été défini automatiquement
   }) async {
+    // Déclarer clientArrivalTime et preparationTime au niveau de la méthode pour qu'ils soient accessibles partout
+    String? clientArrivalTime;
+    int? preparationTime;
+
     try {
       TFullScreenLoader.openLoadingDialog(
           'En cours d\'enrgistrer votre commande...', TImages.pencilAnimation);
@@ -521,11 +525,11 @@ class OrderController extends GetxController {
         );
       } else {
         // Calculer le temps de préparation total de la commande
-        final preparationTime = _calculerTempsPreparationCommande(
+        preparationTime = _calculerTempsPreparationCommande(
             cartController.cartItems.toList());
 
         // Si pas de créneau horaire défini OU si créneau auto-défini, calculer l'heure d'arrivée réelle du client
-        String? clientArrivalTime;
+        clientArrivalTime = null; // Réinitialiser pour chaque nouvelle commande
         debugPrint('🔍 Vérification des créneaux horaires:');
         debugPrint('   - pickupDateTime: $pickupDateTime');
         debugPrint('   - pickupDay: $pickupDay');
@@ -673,12 +677,42 @@ class OrderController extends GetxController {
       TFullScreenLoader.stopLoading();
 
       final isEditing = cartController.editingOrderId.value.isNotEmpty;
+
+      // Construire le sous-titre avec l'heure d'arrivée estimée si disponible
+      String subTitle = isEditing
+          ? 'Votre commande a été modifiée avec succès'
+          : 'Votre commande est en cours de traitement';
+
+      // Ajouter l'heure d'arrivée estimée si elle est disponible (seulement pour les nouvelles commandes)
+      if (!isEditing) {
+        // Récupérer l'heure d'arrivée depuis la commande créée
+        String? arrivalTime;
+        if (editingOrderId.isNotEmpty) {
+          // Si c'est une modification, on ne peut pas accéder à clientArrivalTime ici
+          // car la commande n'a pas encore été récupérée
+        } else {
+          // Pour une nouvelle commande, utiliser la variable clientArrivalTime du scope
+          arrivalTime = clientArrivalTime;
+        }
+
+        if (arrivalTime != null && arrivalTime.isNotEmpty) {
+          // Formater l'heure d'arrivée pour l'affichage (HH:mm:ss -> HH:mm)
+          final timeParts = arrivalTime.split(':');
+          final formattedTime = '${timeParts[0]}:${timeParts[1]}'; // HH:mm
+          subTitle += '\n Votre heure d\'arrivée estimée : $formattedTime';
+        }
+
+        // Ajouter le temps de préparation de la commande
+        if (preparationTime != null && preparationTime > 0) {
+          subTitle +=
+              '\n La commande nécessite au minimum $preparationTime min pour être prête';
+        }
+      }
+
       Get.offAll(() => SuccessScreen(
           image: TImages.orderCompletedAnimation,
           title: isEditing ? 'Commande modifiée !' : 'Produit(s) commandé(s) !',
-          subTitle: isEditing
-              ? 'Votre commande a été modifiée avec succès'
-              : 'Votre commande est en cours de traitement',
+          subTitle: subTitle,
           onPressed: () => Get.offAll(() => const NavigationMenu())));
     } catch (e) {
       TFullScreenLoader.stopLoading();

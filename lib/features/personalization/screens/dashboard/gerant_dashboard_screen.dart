@@ -6,6 +6,7 @@ import '../../../../utils/constants/colors.dart';
 import '../../../../utils/constants/sizes.dart';
 import '../../../../utils/helpers/helper_functions.dart';
 import '../../../shop/controllers/dashboard_controller.dart';
+import 'dashboard_side_menu.dart';
 
 class GerantDashboardScreen extends StatelessWidget {
   const GerantDashboardScreen({super.key});
@@ -26,7 +27,35 @@ class GerantDashboardScreen extends StatelessWidget {
           ),
         ],
       ),
-      body: Obx(() {
+      body: LayoutBuilder(
+        builder: (context, constraints) {
+          // Sur mobile, masquer le menu latéral
+          if (constraints.maxWidth < 900) {
+            return _buildDashboardContent(controller, dark);
+          }
+          
+          // Sur desktop, afficher le menu latéral
+          return Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Menu latéral
+              const DashboardSideMenu(
+                currentRoute: 'dashboard',
+                isAdmin: false,
+              ),
+              // Contenu du dashboard
+              Expanded(
+                child: _buildDashboardContent(controller, dark),
+              ),
+            ],
+          );
+        },
+      ),
+    );
+  }
+
+  Widget _buildDashboardContent(DashboardController controller, bool dark) {
+    return Obx(() {
         if (controller.isLoading.value && controller.stats.value == null) {
           return const Center(child: CircularProgressIndicator());
         }
@@ -136,36 +165,175 @@ class GerantDashboardScreen extends StatelessWidget {
             ),
           ),
         );
-      }),
-    );
+      });
   }
 
   Widget _buildPeriodFilter(DashboardController controller) {
+    final dark = THelperFunctions.isDarkMode(Get.context!);
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      padding: const EdgeInsets.all(AppSizes.md),
       decoration: BoxDecoration(
-        color: AppColors.primary.withOpacity(0.1),
-        borderRadius: BorderRadius.circular(12),
+        color: dark ? AppColors.darkContainer : Colors.white,
+        borderRadius: BorderRadius.circular(AppSizes.cardRadiusSm),
+        border: Border.all(
+          color: AppColors.primary.withOpacity(0.2),
+        ),
       ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Icon(Iconsax.calendar, size: 16),
-          const SizedBox(width: 8),
-          const Text('Période: '),
-          DropdownButton<String>(
-            value: controller.selectedPeriod.value,
-            underline: const SizedBox(),
-            items: ['7', '30', '90'].map((period) {
-              return DropdownMenuItem(
-                value: period,
-                child: Text('$period jours'),
-              );
-            }).toList(),
-            onChanged: (value) {
-              if (value != null) controller.updatePeriod(value);
-            },
+          Row(
+            children: [
+              Icon(Iconsax.calendar, size: 20, color: AppColors.primary),
+              const SizedBox(width: AppSizes.sm),
+              Text(
+                'Filtre par période',
+                style: Theme.of(Get.context!).textTheme.titleMedium?.copyWith(
+                      fontWeight: FontWeight.bold,
+                    ),
+              ),
+            ],
           ),
+          const SizedBox(height: AppSizes.md),
+          // Options de période rapide
+          Row(
+            children: [
+              const Text('Période rapide: '),
+              const SizedBox(width: AppSizes.sm),
+              DropdownButton<String>(
+                value: controller.useCustomDateRange.value ? 'custom' : controller.selectedPeriod.value,
+                underline: const SizedBox(),
+                items: [
+                  const DropdownMenuItem(value: '7', child: Text('7 jours')),
+                  const DropdownMenuItem(value: '30', child: Text('30 jours')),
+                  const DropdownMenuItem(value: '90', child: Text('90 jours')),
+                  const DropdownMenuItem(value: 'custom', child: Text('Personnalisé')),
+                ],
+                onChanged: (value) {
+                  if (value != null) {
+                    if (value == 'custom') {
+                      controller.useCustomDateRange.value = true;
+                    } else {
+                      controller.updatePeriod(value);
+                    }
+                  }
+                },
+              ),
+            ],
+          ),
+          // Filtre par dates personnalisées
+          Obx(() {
+            if (controller.useCustomDateRange.value) {
+              return Column(
+                children: [
+                  const SizedBox(height: AppSizes.md),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: InkWell(
+                          onTap: () async {
+                            final pickedDate = await showDatePicker(
+                              context: Get.context!,
+                              initialDate: controller.startDate.value ?? DateTime.now(),
+                              firstDate: DateTime(2020),
+                              lastDate: DateTime.now(),
+                            );
+                            if (pickedDate != null) {
+                              controller.startDate.value = pickedDate;
+                              if (controller.endDate.value != null) {
+                                controller.updateCustomDateRange(
+                                  controller.startDate.value,
+                                  controller.endDate.value,
+                                );
+                              }
+                            }
+                          },
+                          child: Container(
+                            padding: const EdgeInsets.all(AppSizes.sm),
+                            decoration: BoxDecoration(
+                              border: Border.all(color: Colors.grey),
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: Row(
+                              children: [
+                                Icon(Iconsax.calendar_1, size: 16),
+                                const SizedBox(width: AppSizes.xs),
+                                Text(
+                                  controller.startDate.value != null
+                                      ? '${controller.startDate.value!.day}/${controller.startDate.value!.month}/${controller.startDate.value!.year}'
+                                      : 'Date de début',
+                                  style: TextStyle(
+                                    color: controller.startDate.value != null
+                                        ? Colors.black
+                                        : Colors.grey,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: AppSizes.sm),
+                      const Text('à'),
+                      const SizedBox(width: AppSizes.sm),
+                      Expanded(
+                        child: InkWell(
+                          onTap: () async {
+                            final pickedDate = await showDatePicker(
+                              context: Get.context!,
+                              initialDate: controller.endDate.value ?? DateTime.now(),
+                              firstDate: controller.startDate.value ?? DateTime(2020),
+                              lastDate: DateTime.now(),
+                            );
+                            if (pickedDate != null) {
+                              controller.endDate.value = pickedDate;
+                              if (controller.startDate.value != null) {
+                                controller.updateCustomDateRange(
+                                  controller.startDate.value,
+                                  controller.endDate.value,
+                                );
+                              }
+                            }
+                          },
+                          child: Container(
+                            padding: const EdgeInsets.all(AppSizes.sm),
+                            decoration: BoxDecoration(
+                              border: Border.all(color: Colors.grey),
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: Row(
+                              children: [
+                                Icon(Iconsax.calendar_1, size: 16),
+                                const SizedBox(width: AppSizes.xs),
+                                Text(
+                                  controller.endDate.value != null
+                                      ? '${controller.endDate.value!.day}/${controller.endDate.value!.month}/${controller.endDate.value!.year}'
+                                      : 'Date de fin',
+                                  style: TextStyle(
+                                    color: controller.endDate.value != null
+                                        ? Colors.black
+                                        : Colors.grey,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: AppSizes.sm),
+                      if (controller.startDate.value != null && controller.endDate.value != null)
+                        IconButton(
+                          icon: const Icon(Iconsax.close_circle),
+                          onPressed: () => controller.clearCustomDateRange(),
+                          tooltip: 'Effacer',
+                        ),
+                    ],
+                  ),
+                ],
+              );
+            }
+            return const SizedBox.shrink();
+          }),
         ],
       ),
     );

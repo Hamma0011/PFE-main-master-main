@@ -11,9 +11,8 @@ enum GraphHopperVehicle {
   car('car', 'Voiture'),
   foot('foot', 'À pied'),
   bike('bike', 'Vélo'),
-  motorcycle('motorcycle', 'Moto'),
-  scooter('scooter', 'Scooter'),
-  truck('truck', 'Camion');
+
+  scooter('scooter', 'Scooter');
 
   final String value;
   final String label;

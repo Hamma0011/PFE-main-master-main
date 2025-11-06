@@ -61,6 +61,9 @@ class DashboardController extends GetxController {
   final isLoading = false.obs;
   final stats = Rxn<DashboardStats>();
   final selectedPeriod = '30'.obs; // 7, 30, 90 jours
+  final useCustomDateRange = false.obs; // Utiliser une plage de dates personnalisée
+  final startDate = Rxn<DateTime>();
+  final endDate = Rxn<DateTime>();
 
   @override
   void onInit() {
@@ -93,13 +96,41 @@ class DashboardController extends GetxController {
       final todayStart = DateTime(now.year, now.month, now.day);
       final monthStart = DateTime(now.year, now.month, 1);
 
-      // Toutes les commandes
-      final allOrdersResponse = await _db
-          .from('orders')
-          .select('*, etablissement:etablissement_id(*)')
-          .order('created_at', ascending: false);
+      // Déterminer la plage de dates pour le filtre
+      List allOrders;
+      if (useCustomDateRange.value && startDate.value != null && endDate.value != null) {
+        final filterStartDate = DateTime(
+          startDate.value!.year,
+          startDate.value!.month,
+          startDate.value!.day,
+        );
+        final filterEndDate = DateTime(
+          endDate.value!.year,
+          endDate.value!.month,
+          endDate.value!.day,
+          23,
+          59,
+          59,
+        );
+        
+        // Toutes les commandes avec filtre de dates
+        final allOrdersResponse = await _db
+            .from('orders')
+            .select('*, etablissement:etablissement_id(*)')
+            .gte('created_at', filterStartDate.toIso8601String())
+            .lte('created_at', filterEndDate.toIso8601String())
+            .order('created_at', ascending: false);
+        
+        allOrders = allOrdersResponse as List;
+      } else {
+        // Toutes les commandes sans filtre de dates personnalisé
+        final allOrdersResponse = await _db
+            .from('orders')
+            .select('*, etablissement:etablissement_id(*)')
+            .order('created_at', ascending: false);
 
-      final allOrders = allOrdersResponse as List;
+        allOrders = allOrdersResponse as List;
+      }
 
       // Commandes du jour
       final todayOrdersResponse = await _db
@@ -228,15 +259,45 @@ class DashboardController extends GetxController {
       final now = DateTime.now();
       final todayStart = DateTime(now.year, now.month, now.day);
       final monthStart = DateTime(now.year, now.month, 1);
-      final periodStart = now.subtract(Duration(days: int.parse(selectedPeriod.value)));
+      
+      // Déterminer la plage de dates pour le filtre
+      DateTime periodStart;
+      if (useCustomDateRange.value && startDate.value != null && endDate.value != null) {
+        periodStart = DateTime(
+          startDate.value!.year,
+          startDate.value!.month,
+          startDate.value!.day,
+        );
+      } else {
+        periodStart = now.subtract(Duration(days: int.parse(selectedPeriod.value)));
+      }
 
       // Commandes de l'établissement
-      final allOrdersResponse = await _db
+      var query = _db
           .from('orders')
           .select('*')
-          .eq('etablissement_id', etablissementId.toString())
-          .order('created_at', ascending: false);
-
+          .eq('etablissement_id', etablissementId.toString());
+      
+      if (useCustomDateRange.value && startDate.value != null && endDate.value != null) {
+        final filterStartDate = DateTime(
+          startDate.value!.year,
+          startDate.value!.month,
+          startDate.value!.day,
+        );
+        final filterEndDate = DateTime(
+          endDate.value!.year,
+          endDate.value!.month,
+          endDate.value!.day,
+          23,
+          59,
+          59,
+        );
+        query = query
+            .gte('created_at', filterStartDate.toIso8601String())
+            .lte('created_at', filterEndDate.toIso8601String());
+      }
+      
+      final allOrdersResponse = await query.order('created_at', ascending: false);
       final allOrders = allOrdersResponse as List;
 
       // Commandes du jour
@@ -378,6 +439,25 @@ class DashboardController extends GetxController {
 
   void updatePeriod(String period) {
     selectedPeriod.value = period;
+    useCustomDateRange.value = false;
+    startDate.value = null;
+    endDate.value = null;
+    loadDashboardStats();
+  }
+
+  void updateCustomDateRange(DateTime? start, DateTime? end) {
+    if (start != null && end != null) {
+      useCustomDateRange.value = true;
+      startDate.value = start;
+      endDate.value = end;
+      loadDashboardStats();
+    }
+  }
+
+  void clearCustomDateRange() {
+    useCustomDateRange.value = false;
+    startDate.value = null;
+    endDate.value = null;
     loadDashboardStats();
   }
 
