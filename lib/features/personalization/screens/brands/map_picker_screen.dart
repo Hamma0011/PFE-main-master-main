@@ -160,7 +160,8 @@ class _MapPickerScreenState extends State<MapPickerScreen> {
                   ),
                   children: [
                     TileLayer(
-                      urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+                      urlTemplate: 'https://{s}.tile.openstreetmap.fr/osmfr/{z}/{x}/{y}.png',
+                      subdomains: ['a', 'b', 'c'],
                       userAgentPackageName: 'com.caferesto.app',
                       tileProvider: NetworkTileProvider(),
                     ),

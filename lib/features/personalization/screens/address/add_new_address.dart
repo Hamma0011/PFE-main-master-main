@@ -73,8 +73,9 @@ class AddNewAddressScreen extends StatelessWidget {
                             children: [
                               TileLayer(
                                 urlTemplate:
-                                    'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
-                                userAgentPackageName: 'caferesto.app',
+                                    'https://{s}.tile.openstreetmap.fr/osmfr/{z}/{x}/{y}.png',
+                                subdomains: ['a', 'b', 'c'],
+                                userAgentPackageName: 'com.caferesto.app',
                                 tileProvider: CancellableNetworkTileProvider(),
                               ),
                               if (controller.selectedLocation.value != null)

@@ -638,8 +638,10 @@ class _DeliveryMapViewState extends State<DeliveryMapView> {
             ),
             children: [
               TileLayer(
-                urlTemplate: "https://tile.openstreetmap.org/{z}/{x}/{y}.png",
-                userAgentPackageName: 'com.example.app',
+                urlTemplate: 'https://{s}.tile.openstreetmap.fr/osmfr/{z}/{x}/{y}.png',
+                subdomains: ['a', 'b', 'c'],
+                userAgentPackageName: 'com.caferesto.app',
+                tileProvider: NetworkTileProvider(),
               ),
               if (routePoints.isNotEmpty)
                 PolylineLayer(
