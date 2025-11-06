@@ -7,6 +7,7 @@ import 'package:get/get.dart';
 import 'package:http/http.dart' as http;
 import 'package:latlong2/latlong.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:geolocator/geolocator.dart';
 import '../../../../utils/constants/colors.dart';
 import '../../../../utils/device/device_utility.dart';
 import '../../models/order_model.dart';
@@ -36,10 +37,20 @@ class _DeliveryMapViewState extends State<DeliveryMapView> {
   Timer? _debounceTimer;
   Etablissement? _loadedEtablissement;
   bool _isLoadingEtablissement = false;
+  Position? _currentClientPosition;
 
   @override
   void initState() {
     super.initState();
+    // Obtenir la position GPS actuelle au démarrage
+    _obtenirPositionGPSActuelle().then((position) {
+      if (mounted && !_isDisposed) {
+        setState(() {
+          _currentClientPosition = position;
+        });
+      }
+    });
+
     // Vérifier que l'ordre a les données nécessaires
     if (widget.order.etablissement == null &&
         widget.order.etablissementId.isNotEmpty) {
@@ -237,8 +248,12 @@ class _DeliveryMapViewState extends State<DeliveryMapView> {
 
   LatLng _calculateCenter() {
     final etablissement = _etablissement;
-    final clientLat = widget.order.address?.latitude ?? 0.0;
-    final clientLng = widget.order.address?.longitude ?? 0.0;
+    final clientLat = _currentClientPosition?.latitude ??
+        widget.order.address?.latitude ??
+        0.0;
+    final clientLng = _currentClientPosition?.longitude ??
+        widget.order.address?.longitude ??
+        0.0;
     final restoLat = etablissement?.latitude ?? 0.0;
     final restoLng = etablissement?.longitude ?? 0.0;
 
@@ -303,7 +318,7 @@ class _DeliveryMapViewState extends State<DeliveryMapView> {
 
     try {
       final etablissement = _etablissement;
-      
+
       // Si l'établissement est null mais qu'on est en train de le charger, attendre
       if (etablissement == null) {
         if (_isLoadingEtablissement) {
@@ -311,15 +326,28 @@ class _DeliveryMapViewState extends State<DeliveryMapView> {
           debugPrint('⏳ En attente du chargement de l\'établissement...');
           return;
         }
-        
+
         if (!_isDisposed && mounted) {
           await _showSnack("Erreur", "Établissement non disponible.");
         }
         return;
       }
 
-      final clientLat = widget.order.address?.latitude ?? 0.0;
-      final clientLng = widget.order.address?.longitude ?? 0.0;
+      // Obtenir la position GPS actuelle du client
+      if (_currentClientPosition == null) {
+        debugPrint('📍 Récupération de la position GPS actuelle...');
+        _currentClientPosition = await _obtenirPositionGPSActuelle();
+        if (_currentClientPosition == null) {
+          if (!_isDisposed && mounted) {
+            await _showSnack(
+                "Erreur", "Impossible d'obtenir votre position GPS actuelle.");
+          }
+          return;
+        }
+      }
+
+      final clientLat = _currentClientPosition!.latitude;
+      final clientLng = _currentClientPosition!.longitude;
       final restoLat = etablissement.latitude ?? 0.0;
       final restoLng = etablissement.longitude ?? 0.0;
 
@@ -332,6 +360,8 @@ class _DeliveryMapViewState extends State<DeliveryMapView> {
         }
         return;
       }
+
+      debugPrint('📍 Position GPS actuelle utilisée: $clientLat, $clientLng');
 
       // Vérifier que dotenv est chargé
       String apiKey = '';
@@ -656,7 +686,8 @@ class _DeliveryMapViewState extends State<DeliveryMapView> {
             ),
             children: [
               TileLayer(
-                urlTemplate: 'https://{s}.tile.openstreetmap.fr/osmfr/{z}/{x}/{y}.png',
+                urlTemplate:
+                    'https://{s}.tile.openstreetmap.fr/osmfr/{z}/{x}/{y}.png',
                 subdomains: ['a', 'b', 'c'],
                 userAgentPackageName: 'com.caferesto.app',
                 tileProvider: NetworkTileProvider(),
@@ -687,7 +718,19 @@ class _DeliveryMapViewState extends State<DeliveryMapView> {
                       child: Icon(Icons.restaurant,
                           color: Colors.red, size: isMobile ? 30 : 36),
                     ),
-                  if (widget.order.address?.latitude != 0.0 &&
+                  // Utiliser la position GPS actuelle si disponible, sinon l'adresse sauvegardée
+                  if (_currentClientPosition != null)
+                    Marker(
+                      point: LatLng(
+                        _currentClientPosition!.latitude,
+                        _currentClientPosition!.longitude,
+                      ),
+                      width: isMobile ? 50 : 60,
+                      height: isMobile ? 50 : 60,
+                      child: Icon(Icons.home,
+                          color: Colors.blue, size: isMobile ? 30 : 36),
+                    )
+                  else if (widget.order.address?.latitude != 0.0 &&
                       widget.order.address?.longitude != 0.0)
                     Marker(
                       point: LatLng(
@@ -791,5 +834,47 @@ class _DeliveryMapViewState extends State<DeliveryMapView> {
         ],
       ),
     );
+  }
+
+  /// Obtient la position GPS actuelle du client
+  /// Retourne la Position ou null si impossible d'obtenir
+  Future<Position?> _obtenirPositionGPSActuelle() async {
+    try {
+      // Vérifier les permissions de localisation
+      bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
+      if (!serviceEnabled) {
+        debugPrint('❌ Les services de localisation sont désactivés');
+        return null;
+      }
+
+      LocationPermission permission = await Geolocator.checkPermission();
+      if (permission == LocationPermission.denied) {
+        permission = await Geolocator.requestPermission();
+        if (permission == LocationPermission.denied) {
+          debugPrint('❌ Les permissions de localisation sont refusées');
+          return null;
+        }
+      }
+
+      if (permission == LocationPermission.deniedForever) {
+        debugPrint(
+            '❌ Les permissions de localisation sont définitivement refusées');
+        return null;
+      }
+
+      // Obtenir la position actuelle
+      debugPrint('📍 Demande de la position GPS actuelle...');
+      final position = await Geolocator.getCurrentPosition(
+        desiredAccuracy: LocationAccuracy.high,
+        timeLimit: const Duration(seconds: 10),
+      );
+
+      debugPrint(
+          '✅ Position GPS obtenue: ${position.latitude}, ${position.longitude}');
+      return position;
+    } catch (e) {
+      debugPrint('❌ Erreur lors de l\'obtention de la position GPS: $e');
+      return null;
+    }
   }
 }

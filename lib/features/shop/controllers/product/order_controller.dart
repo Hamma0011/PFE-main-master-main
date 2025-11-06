@@ -1,12 +1,7 @@
-import 'dart:async';
-import 'dart:convert';
 import 'package:caferesto/features/personalization/controllers/user_controller.dart';
-import 'package:caferesto/features/personalization/models/address_model.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-import 'package:flutter_dotenv/flutter_dotenv.dart';
-import 'package:http/http.dart' as http;
 
 import '../../../../common/widgets/success_screen/success_screen.dart';
 import '../../../../data/repositories/authentication/authentication_repository.dart';
@@ -24,6 +19,7 @@ import '../../../../data/repositories/horaire/horaire_repository.dart';
 import 'panier_controller.dart';
 import 'checkout_controller.dart';
 import 'horaire_controller.dart';
+import '../../services/arrival_time_calculator_service.dart';
 
 class OrderController extends GetxController {
   static OrderController get instance {
@@ -42,6 +38,9 @@ class OrderController extends GetxController {
   final _db = Supabase.instance.client;
   final addressController = AddressController.instance;
   final checkoutController = CheckoutController.instance;
+
+  // Service pour calculer l'heure d'arrivée
+  final _arrivalTimeCalculator = ArrivalTimeCalculatorService();
 
   final orders = <OrderModel>[].obs;
   final isLoading = false.obs;
@@ -542,27 +541,60 @@ class OrderController extends GetxController {
             creneauAutoDefini;
 
         if (shouldCalculateArrivalTime) {
-          debugPrint('🔄 Calcul de l\'heure d\'arrivée réelle...');
+          debugPrint(
+              '🔄 Demande de confirmation pour calculer l\'heure d\'arrivée...');
           debugPrint(
               '   - Raison: ${(pickupDateTime == null || pickupDay == null || pickupTimeRange == null) ? "Créneau non défini" : "Créneau auto-défini"}');
           debugPrint(
               '📍 Adresse client - Latitude: ${selectedAddress.latitude}, Longitude: ${selectedAddress.longitude}');
-          // Calculer l'heure d'arrivée réelle via GraphHopper
-          clientArrivalTime = await _calculerHeureArriveeReelle(
-            etablissementId: etablissementId,
-            clientAddress: selectedAddress,
-          );
-          if (clientArrivalTime != null) {
-            debugPrint(
-                '✅ Heure d\'arrivée calculée et prête à être enregistrée: $clientArrivalTime');
+
+          // Demander à l'utilisateur s'il accepte d'afficher son heure d'arrivée estimée
+          final accepteAffichage = await _demanderConfirmationHeureArrivee();
+
+          if (accepteAffichage == true) {
+            // Demander à l'utilisateur de choisir son moyen de transport
+            final vehicle = await _demanderChoixMoyenTransport();
+
+            if (vehicle != null) {
+              // Calculer l'heure d'arrivée réelle via GraphHopper avec le véhicule choisi
+              // Utilise maintenant la localisation GPS actuelle au lieu de l'adresse sauvegardée
+              clientArrivalTime =
+                  await _arrivalTimeCalculator.calculerHeureArriveeReelle(
+                etablissementId: etablissementId,
+                vehicle: vehicle,
+              );
+              if (clientArrivalTime != null) {
+                debugPrint(
+                    '✅ Heure d\'arrivée calculée et prête à être enregistrée: $clientArrivalTime');
+                // Afficher un message de confirmation à l'utilisateur
+                TLoaders.successSnackBar(
+                  title: 'Heure d\'arrivée estimée',
+                  message:
+                      'Votre heure d\'arrivée estimée est $clientArrivalTime',
+                );
+              } else {
+                debugPrint(
+                    '⚠️ Impossible de calculer l\'heure d\'arrivée, la commande sera enregistrée sans heure d\'arrivée');
+                debugPrint('   Raisons possibles:');
+                debugPrint('   - Permissions GPS refusées');
+                debugPrint('   - Services de localisation désactivés');
+                debugPrint('   - Coordonnées GPS invalides');
+                debugPrint('   - Clé API GraphHopper non configurée');
+                debugPrint('   - Erreur lors de l\'appel à l\'API GraphHopper');
+                debugPrint('   - Établissement introuvable');
+                TLoaders.warningSnackBar(
+                  title: 'Calcul impossible',
+                  message:
+                      'Impossible de calculer l\'heure d\'arrivée. La commande sera enregistrée sans heure d\'arrivée.',
+                );
+              }
+            } else {
+              debugPrint(
+                  'ℹ️ L\'utilisateur a annulé le choix du moyen de transport');
+            }
           } else {
             debugPrint(
-                '⚠️ Impossible de calculer l\'heure d\'arrivée, la commande sera enregistrée sans heure d\'arrivée');
-            debugPrint('   Raisons possibles:');
-            debugPrint('   - Coordonnées GPS manquantes ou invalides');
-            debugPrint('   - Clé API GraphHopper non configurée');
-            debugPrint('   - Erreur lors de l\'appel à l\'API GraphHopper');
-            debugPrint('   - Établissement introuvable');
+                'ℹ️ L\'utilisateur a refusé d\'afficher son heure d\'arrivée estimée');
           }
         } else {
           debugPrint(
@@ -1076,202 +1108,135 @@ class OrderController extends GetxController {
     }
   }
 
-  /// Calcule l'heure d'arrivée réelle du client en utilisant GraphHopper API
-  /// Retourne l'heure au format HH:mm:ss (type TIME) ou null si le calcul échoue
-  Future<String?> _calculerHeureArriveeReelle({
-    required String etablissementId,
-    required AddressModel clientAddress,
-  }) async {
+  /// Demande à l'utilisateur s'il accepte d'afficher son heure d'arrivée estimée
+  /// Retourne true si accepté, false si refusé, null si annulé
+  Future<bool?> _demanderConfirmationHeureArrivee() async {
     try {
-      debugPrint('🚀 [DEBUG] Début du calcul de l\'heure d\'arrivée réelle');
-      debugPrint('   - Établissement ID: $etablissementId');
-      debugPrint('   - Adresse client ID: ${clientAddress.id}');
-
-      // Récupérer les coordonnées de l'établissement
-      debugPrint('   - Récupération des coordonnées de l\'établissement...');
-      final etablissementCoords =
-          await _obtenirCoordonneesEtablissement(etablissementId);
-      if (etablissementCoords == null) {
-        debugPrint(
-            '❌ [DEBUG] Impossible de récupérer les coordonnées de l\'établissement');
-        return null;
-      }
-      debugPrint(
-          '   ✅ Coordonnées établissement récupérées: ${etablissementCoords['latitude']}, ${etablissementCoords['longitude']}');
-
-      // Vérifier que l'adresse du client a des coordonnées
-      final clientLat = clientAddress.latitude ?? 0.0;
-      final clientLng = clientAddress.longitude ?? 0.0;
-      final restoLat = etablissementCoords['latitude']!;
-      final restoLng = etablissementCoords['longitude']!;
-
-      debugPrint('   - Coordonnées client: $clientLat, $clientLng');
-      debugPrint('   - Coordonnées établissement: $restoLat, $restoLng');
-
-      if (clientLat == 0.0 ||
-          clientLng == 0.0 ||
-          restoLat == 0.0 ||
-          restoLng == 0.0) {
-        debugPrint(
-            '❌ [DEBUG] Coordonnées invalides pour le calcul de l\'itinéraire');
-        debugPrint(
-            '   - clientLat: $clientLat (${clientLat == 0.0 ? "INVALIDE" : "OK"})');
-        debugPrint(
-            '   - clientLng: $clientLng (${clientLng == 0.0 ? "INVALIDE" : "OK"})');
-        debugPrint(
-            '   - restoLat: $restoLat (${restoLat == 0.0 ? "INVALIDE" : "OK"})');
-        debugPrint(
-            '   - restoLng: $restoLng (${restoLng == 0.0 ? "INVALIDE" : "OK"})');
-        return null;
-      }
-
-      // Récupérer la clé API GraphHopper
-      debugPrint('   - Récupération de la clé API GraphHopper...');
-      String apiKey = '';
-      try {
-        apiKey = dotenv.env['GRAPHHOPPER_API_KEY'] ?? '';
-        debugPrint(
-            '   - Clé API récupérée depuis dotenv: ${apiKey.isNotEmpty ? "OK (${apiKey.substring(0, 5)}...)" : "VIDE"}');
-      } catch (e) {
-        debugPrint('   ⚠️ Erreur lors de la récupération de la clé API: $e');
-        try {
-          await dotenv.load();
-          apiKey = dotenv.env['GRAPHHOPPER_API_KEY'] ?? '';
-          debugPrint(
-              '   - Clé API chargée après dotenv.load(): ${apiKey.isNotEmpty ? "OK" : "VIDE"}');
-        } catch (loadError) {
-          debugPrint('   ❌ Erreur lors du chargement de dotenv: $loadError');
-        }
-      }
-
-      if (apiKey.isEmpty) {
-        debugPrint('❌ [DEBUG] Clé API GraphHopper non configurée ou vide');
-        return null;
-      }
-      debugPrint('   ✅ Clé API GraphHopper disponible');
-
-      // Appeler l'API GraphHopper pour calculer le temps de trajet
-      debugPrint('   - Appel de l\'API GraphHopper...');
-      final url = Uri.parse(
-        'https://graphhopper.com/api/1/route?point=$restoLat,$restoLng&point=$clientLat,$clientLng&vehicle=car&points_encoded=false&key=$apiKey',
+      final result = await Get.dialog<bool>(
+        AlertDialog(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+          ),
+          title: const Text(
+            'Heure d\'arrivée estimée',
+            style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+          ),
+          content: const Text(
+            'Souhaitez-vous que nous calculions et affichions votre heure d\'arrivée estimée à l\'établissement ?\n\n'
+            'Nous utiliserons votre position GPS et le moyen de transport que vous choisirez pour estimer votre temps de trajet.',
+            style: TextStyle(fontSize: 14),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Get.back(result: false),
+              child: const Text(
+                'Non',
+                style: TextStyle(color: Colors.grey),
+              ),
+            ),
+            ElevatedButton(
+              onPressed: () => Get.back(result: true),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.blue,
+                foregroundColor: Colors.white,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(8),
+                ),
+              ),
+              child: const Text('Oui'),
+            ),
+          ],
+        ),
+        barrierDismissible: false,
       );
-      debugPrint(
-          '   - URL GraphHopper: ${url.toString().replaceAll(apiKey, '***')}');
-
-      final response = await http.get(url).timeout(
-        const Duration(seconds: 10),
-        onTimeout: () {
-          debugPrint('❌ [DEBUG] Timeout lors de l\'appel à GraphHopper');
-          throw TimeoutException('Request timeout');
-        },
-      );
-
-      debugPrint('   - Réponse GraphHopper: Status ${response.statusCode}');
-      if (response.statusCode != 200) {
-        debugPrint('❌ [DEBUG] Erreur API GraphHopper: ${response.statusCode}');
-        debugPrint('   - Body: ${response.body}');
-        return null;
-      }
-
-      // Parser la réponse
-      Map<String, dynamic> data;
-      try {
-        data = jsonDecode(response.body) as Map<String, dynamic>;
-      } catch (e) {
-        debugPrint('❌ Erreur lors du parsing JSON: $e');
-        return null;
-      }
-
-      if (data['paths'] == null || (data['paths'] as List).isEmpty) {
-        debugPrint('⚠️ Aucun chemin retourné par l\'API GraphHopper');
-        return null;
-      }
-
-      final path = (data['paths'] as List).first as Map<String, dynamic>;
-      final time =
-          (path['time'] as num?)?.toDouble() ?? 0.0; // Temps en millisecondes
-
-      if (time <= 0) {
-        debugPrint('⚠️ Temps de trajet invalide: $time');
-        return null;
-      }
-
-      // Calculer l'heure d'arrivée (heure actuelle + temps de trajet)
-      final tempsTrajetMinutes =
-          (time / 60000).round(); // Convertir millisecondes en minutes
-      final heureActuelle = DateTime.now();
-      final heureArriveeSansDecalage =
-          heureActuelle.add(Duration(minutes: tempsTrajetMinutes));
-
-      // Ajouter +1 heure pour s'adapter à l'heure locale de Tunis (UTC+1)
-      final heureArrivee =
-          heureArriveeSansDecalage.add(const Duration(hours: 1));
-
-      // Formater l'heure au format HH:mm:ss (type TIME)
-      final formattedTime =
-          '${heureArrivee.hour.toString().padLeft(2, '0')}:${heureArrivee.minute.toString().padLeft(2, '0')}:${heureArrivee.second.toString().padLeft(2, '0')}';
-      final formattedTimeSansDecalage =
-          '${heureArriveeSansDecalage.hour.toString().padLeft(2, '0')}:${heureArriveeSansDecalage.minute.toString().padLeft(2, '0')}:${heureArriveeSansDecalage.second.toString().padLeft(2, '0')}';
-
-      // Logs de débogage détaillés
-      debugPrint('═══════════════════════════════════════════════════════════');
-      debugPrint('🕐 CALCUL HEURE D\'ARRIVÉE RÉELLE (GraphHopper)');
-      debugPrint('═══════════════════════════════════════════════════════════');
-      debugPrint('📍 Coordonnées client: $clientLat, $clientLng');
-      debugPrint('📍 Coordonnées établissement: $restoLat, $restoLng');
-      debugPrint(
-          '⏱️  Temps de trajet: $tempsTrajetMinutes minutes (${(time / 1000).toStringAsFixed(0)} secondes)');
-      debugPrint(
-          '🕐 Heure actuelle: ${heureActuelle.hour.toString().padLeft(2, '0')}:${heureActuelle.minute.toString().padLeft(2, '0')}:${heureActuelle.second.toString().padLeft(2, '0')}');
-      debugPrint(
-          '🕐 Heure d\'arrivée (sans décalage): $formattedTimeSansDecalage');
-      debugPrint('🕐 Heure d\'arrivée (+1h Tunis): $formattedTime');
-      debugPrint('📝 Format TIME pour DB: $formattedTime');
-      debugPrint('═══════════════════════════════════════════════════════════');
-
-      return formattedTime;
+      return result;
     } catch (e) {
-      debugPrint('❌ Erreur lors du calcul de l\'heure d\'arrivée réelle: $e');
+      debugPrint('❌ Erreur lors de la demande de confirmation: $e');
       return null;
     }
   }
 
-  /// Récupère les coordonnées GPS de l'établissement
-  /// Retourne un Map avec 'latitude' et 'longitude' si disponible, null sinon
-  Future<Map<String, double>?> _obtenirCoordonneesEtablissement(
-      String etablissementId) async {
+  /// Demande à l'utilisateur de choisir son moyen de transport
+  /// Retourne le véhicule choisi ou null si annulé
+  Future<GraphHopperVehicle?> _demanderChoixMoyenTransport() async {
     try {
-      final response = await _db
-          .from('etablissements')
-          .select('latitude, longitude')
-          .eq('id', etablissementId)
-          .maybeSingle();
+      final result = await Get.dialog<GraphHopperVehicle>(
+        _VehicleSelectionDialog(),
+        barrierDismissible: false,
+      );
 
-      if (response == null) {
-        debugPrint('⚠️ Établissement non trouvé: $etablissementId');
-        return null;
-      }
-
-      final latitude = (response['latitude'] as num?)?.toDouble();
-      final longitude = (response['longitude'] as num?)?.toDouble();
-
-      if (latitude == null ||
-          longitude == null ||
-          latitude == 0.0 ||
-          longitude == 0.0) {
-        debugPrint('⚠️ Coordonnées GPS de l\'établissement non disponibles');
-        return null;
-      }
-
-      debugPrint('📍 Coordonnées établissement : $latitude, $longitude');
-      return {
-        'latitude': latitude,
-        'longitude': longitude,
-      };
+      return result;
     } catch (e) {
-      debugPrint(
-          '❌ Erreur lors de la récupération des coordonnées de l\'établissement: $e');
+      debugPrint('❌ Erreur lors du choix du moyen de transport: $e');
       return null;
     }
+  }
+}
+
+/// Widget pour sélectionner le moyen de transport
+class _VehicleSelectionDialog extends StatefulWidget {
+  @override
+  State<_VehicleSelectionDialog> createState() =>
+      _VehicleSelectionDialogState();
+}
+
+class _VehicleSelectionDialogState extends State<_VehicleSelectionDialog> {
+  GraphHopperVehicle selectedVehicle = GraphHopperVehicle.car;
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(16),
+      ),
+      title: const Text(
+        'Choisissez votre moyen de transport',
+        style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+      ),
+      content: SizedBox(
+        width: double.maxFinite,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: GraphHopperVehicle.values.map((vehicle) {
+            return RadioListTile<GraphHopperVehicle>(
+              title: Text(vehicle.label),
+              value: vehicle,
+              groupValue: selectedVehicle,
+              onChanged: (GraphHopperVehicle? value) {
+                if (value != null) {
+                  setState(() {
+                    selectedVehicle = value;
+                  });
+                }
+              },
+              contentPadding: EdgeInsets.zero,
+            );
+          }).toList(),
+        ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Get.back(result: null),
+          child: const Text(
+            'Annuler',
+            style: TextStyle(color: Colors.grey),
+          ),
+        ),
+        ElevatedButton(
+          onPressed: () {
+            // Utiliser le véhicule sélectionné
+            Get.back(result: selectedVehicle);
+          },
+          style: ElevatedButton.styleFrom(
+            backgroundColor: Colors.blue,
+            foregroundColor: Colors.white,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(8),
+            ),
+          ),
+          child: const Text('Confirmer'),
+        ),
+      ],
+    );
   }
 }
