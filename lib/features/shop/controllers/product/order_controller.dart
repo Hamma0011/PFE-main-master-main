@@ -1087,8 +1087,18 @@ class OrderController extends GetxController {
           order.items.fold<int>(0, (sum, item) => sum + item.quantity);
 
       // Créer le message de notification avec le nom de l'établissement
-      final message =
+      String message =
           'Nouvelle commande reçue pour $etablissementName : $totalItems article${totalItems > 1 ? 's' : ''} pour un montant total de ${order.totalAmount.toStringAsFixed(2)} DT';
+
+      // Ajouter l'heure d'arrivée estimée si elle est disponible
+      if (order.clientArrivalTime != null &&
+          order.clientArrivalTime!.isNotEmpty) {
+        // Formater l'heure d'arrivée pour l'affichage (HH:mm:ss -> HH:mm)
+        final arrivalTime = order.clientArrivalTime!;
+        final timeParts = arrivalTime.split(':');
+        final formattedTime = '${timeParts[0]}:${timeParts[1]}'; // HH:mm
+        message += '\n⏰ Heure d\'arrivée estimée du client : $formattedTime';
+      }
 
       // Envoyer la notification au gérant
       await _db.from('notifications').insert({
