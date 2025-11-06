@@ -24,7 +24,6 @@ class SubCategoriesScreen extends StatefulWidget {
 }
 
 class _SubCategoriesScreenState extends State<SubCategoriesScreen> {
-
   final CategoryController categoryController = CategoryController.instance;
   final ProduitRepository produitRepository = ProduitRepository.instance;
   final Rx<Etablissement?> selectedEtablissement = Rx<Etablissement?>(null);
@@ -90,7 +89,7 @@ class _SubCategoriesScreenState extends State<SubCategoriesScreen> {
         children: [
           /// Filtre par établissement
           _buildEtablissementFilter(context, isLargeScreen),
-          
+
           /// Liste des produits
           Expanded(
             child: Obx(() {
@@ -99,7 +98,7 @@ class _SubCategoriesScreenState extends State<SubCategoriesScreen> {
               }
 
               final products = filteredProducts;
-              
+
               if (products.isEmpty) {
                 return Center(
                   child: Column(
@@ -179,9 +178,8 @@ class _SubCategoriesScreenState extends State<SubCategoriesScreen> {
                       color: Get.isDarkMode ? Colors.white70 : Colors.black87,
                     ),
                     filled: true,
-                    fillColor: Get.isDarkMode
-                        ? Colors.grey[800]
-                        : Colors.grey[100],
+                    fillColor:
+                        Get.isDarkMode ? Colors.grey[800] : Colors.grey[100],
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(12),
                       borderSide: BorderSide(
@@ -219,7 +217,8 @@ class _SubCategoriesScreenState extends State<SubCategoriesScreen> {
                       child: Text(
                         'Tous les établissements',
                         style: TextStyle(
-                          color: Get.isDarkMode ? Colors.white70 : Colors.black87,
+                          color:
+                              Get.isDarkMode ? Colors.white70 : Colors.black87,
                         ),
                       ),
                     ),
@@ -229,12 +228,13 @@ class _SubCategoriesScreenState extends State<SubCategoriesScreen> {
                         child: Text(
                           etablissement.name,
                           style: TextStyle(
-                            color: Get.isDarkMode ? Colors.white : Colors.black87,
+                            color:
+                                Get.isDarkMode ? Colors.white : Colors.black87,
                           ),
                           overflow: TextOverflow.ellipsis,
                         ),
                       );
-                    }).toList(),
+                    }),
                   ],
                   onChanged: (Etablissement? value) {
                     selectedEtablissement.value = value;
@@ -259,5 +259,4 @@ class _SubCategoriesScreenState extends State<SubCategoriesScreen> {
           )),
     );
   }
-
 }

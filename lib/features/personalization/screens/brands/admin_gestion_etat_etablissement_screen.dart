@@ -9,7 +9,7 @@ import '../../../shop/models/etablissement_model.dart';
 import '../../../shop/models/statut_etablissement_model.dart';
 
 class AdminGestionEtablissementsScreen extends StatefulWidget {
-  const AdminGestionEtablissementsScreen({Key? key}) : super(key: key);
+  const AdminGestionEtablissementsScreen({super.key});
 
   @override
   State<AdminGestionEtablissementsScreen> createState() =>
@@ -40,7 +40,8 @@ class _AdminGestionEtablissementsScreenState
       // Vérifier le rôle de l'utilisateur
       if (userRole == 'Gérant' && user.id.isNotEmpty) {
         // Les gérants ne voient que leurs propres établissements
-        final data = await _etablissementController.fetchEtablissementsByOwner(user.id);
+        final data =
+            await _etablissementController.fetchEtablissementsByOwner(user.id);
         setState(() => _etablissements = data ?? []);
       } else if (userRole == 'Admin') {
         // Les admins voient tous les établissements
@@ -59,12 +60,13 @@ class _AdminGestionEtablissementsScreenState
 
   Future<void> _changerStatut(Etablissement etab) async {
     final userRole = _userController.userRole;
-    
+
     // Seuls les admins peuvent changer le statut
     if (userRole != 'Admin') {
       TLoaders.warningSnackBar(
         title: 'Permission refusée',
-        message: 'Seuls les administrateurs peuvent modifier le statut des établissements',
+        message:
+            'Seuls les administrateurs peuvent modifier le statut des établissements',
       );
       return;
     }
@@ -128,7 +130,7 @@ class _AdminGestionEtablissementsScreenState
   @override
   Widget build(BuildContext context) {
     final userRole = _userController.userRole;
-    
+
     // Vérifier que l'utilisateur est Admin ou Gérant
     if (userRole != 'Admin' && userRole != 'Gérant') {
       return const Scaffold(

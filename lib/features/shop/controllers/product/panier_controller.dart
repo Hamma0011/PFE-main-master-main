@@ -459,8 +459,9 @@ class CartController extends GetxController {
     if (cartItems.isEmpty) return false;
 
     for (final item in cartItems) {
-      if (item.quantity <= 0)
+      if (item.quantity <= 0) {
         return false; // Empêcher le paiement si la quantité est 0
+      }
       final product = item.product;
       if (product != null && product.productType == 'variable') {
         if (item.selectedVariation == null || item.selectedVariation!.isEmpty) {

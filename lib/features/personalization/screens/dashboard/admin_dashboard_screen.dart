@@ -130,8 +130,8 @@ class AdminDashboardScreen extends StatelessWidget {
                 ),
                 const SizedBox(height: AppSizes.spaceBtwSections),
 
-                // Commandes récentes
-                _buildRecentOrders(stats, dark),
+                // Utilisateurs les plus fidèles
+                _buildTopUsers(stats, dark),
               ],
             ),
           ),
@@ -172,122 +172,202 @@ class AdminDashboardScreen extends StatelessWidget {
   }
 
   Widget _buildMainStatsCards(DashboardStats stats, bool dark) {
-    return GridView.count(
-      shrinkWrap: true,
-      physics: const NeverScrollableScrollPhysics(),
-      crossAxisCount: 4,
-      crossAxisSpacing: AppSizes.spaceBtwItems,
-      mainAxisSpacing: AppSizes.spaceBtwItems,
-      childAspectRatio: 1.5,
-      children: [
-        _buildStatCard(
-          'Total Commandes',
-          stats.totalOrders.toString(),
-          Iconsax.shopping_bag,
-          Colors.blue,
-          dark,
-        ),
-        _buildStatCard(
-          'Revenus Total',
-          '${stats.totalRevenue.toStringAsFixed(2)} DT',
-          Iconsax.dollar_circle,
-          Colors.green,
-          dark,
-        ),
-        _buildStatCard(
-          'Revenus Aujourd\'hui',
-          '${stats.todayRevenue.toStringAsFixed(2)} DT',
-          Iconsax.calendar,
-          Colors.orange,
-          dark,
-        ),
-        _buildStatCard(
-          'Revenus Ce Mois',
-          '${stats.monthlyRevenue.toStringAsFixed(2)} DT',
-          Iconsax.chart,
-          Colors.purple,
-          dark,
-        ),
-        _buildStatCard(
-          'Commandes En Attente',
-          stats.pendingOrders.toString(),
-          Iconsax.clock,
-          Colors.amber,
-          dark,
-        ),
-        _buildStatCard(
-          'Commandes Actives',
-          stats.activeOrders.toString(),
-          Iconsax.activity,
-          Colors.cyan,
-          dark,
-        ),
-        _buildStatCard(
-          'Établissements',
-          stats.totalEtablissements.toString(),
-          Iconsax.shop,
-          Colors.indigo,
-          dark,
-        ),
-        _buildStatCard(
-          'Utilisateurs',
-          stats.totalUsers.toString(),
-          Iconsax.profile_2user,
-          Colors.pink,
-          dark,
-        ),
-      ],
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        // Déterminer le nombre de colonnes selon la largeur de l'écran
+        int crossAxisCount;
+        double childAspectRatio;
+        double iconSize;
+        double valueFontSize;
+        double titleFontSize;
+        
+        if (constraints.maxWidth > 1200) {
+          // Desktop large
+          crossAxisCount = 4;
+          childAspectRatio = 3.5;
+          iconSize = 16;
+          valueFontSize = 14;
+          titleFontSize = 10;
+        } else if (constraints.maxWidth > 800) {
+          // Desktop moyen / Tablette large
+          crossAxisCount = 3;
+          childAspectRatio = 2.8;
+          iconSize = 16;
+          valueFontSize = 14;
+          titleFontSize = 10;
+        } else if (constraints.maxWidth > 600) {
+          // Tablette
+          crossAxisCount = 2;
+          childAspectRatio = 2.5;
+          iconSize = 18;
+          valueFontSize = 16;
+          titleFontSize = 11;
+        } else {
+          // Mobile
+          crossAxisCount = 1;
+          childAspectRatio = 3.0;
+          iconSize = 20;
+          valueFontSize = 18;
+          titleFontSize = 12;
+        }
+        
+        return GridView.count(
+          shrinkWrap: true,
+          physics: const NeverScrollableScrollPhysics(),
+          crossAxisCount: crossAxisCount,
+          crossAxisSpacing: AppSizes.sm,
+          mainAxisSpacing: AppSizes.sm,
+          childAspectRatio: childAspectRatio,
+          children: [
+            _buildStatCard(
+              'Total Commandes',
+              stats.totalOrders.toString(),
+              Iconsax.shopping_bag,
+              Colors.blue,
+              dark,
+              iconSize: iconSize,
+              valueFontSize: valueFontSize,
+              titleFontSize: titleFontSize,
+            ),
+            _buildStatCard(
+              'Revenus Total',
+              '${stats.totalRevenue.toStringAsFixed(2)} DT',
+              Iconsax.dollar_circle,
+              Colors.green,
+              dark,
+              iconSize: iconSize,
+              valueFontSize: valueFontSize,
+              titleFontSize: titleFontSize,
+            ),
+            _buildStatCard(
+              'Revenus Aujourd\'hui',
+              '${stats.todayRevenue.toStringAsFixed(2)} DT',
+              Iconsax.calendar,
+              Colors.orange,
+              dark,
+              iconSize: iconSize,
+              valueFontSize: valueFontSize,
+              titleFontSize: titleFontSize,
+            ),
+            _buildStatCard(
+              'Revenus Ce Mois',
+              '${stats.monthlyRevenue.toStringAsFixed(2)} DT',
+              Iconsax.chart,
+              Colors.purple,
+              dark,
+              iconSize: iconSize,
+              valueFontSize: valueFontSize,
+              titleFontSize: titleFontSize,
+            ),
+            _buildStatCard(
+              'Commandes En Attente',
+              stats.pendingOrders.toString(),
+              Iconsax.clock,
+              Colors.amber,
+              dark,
+              iconSize: iconSize,
+              valueFontSize: valueFontSize,
+              titleFontSize: titleFontSize,
+            ),
+            _buildStatCard(
+              'Commandes Actives',
+              stats.activeOrders.toString(),
+              Iconsax.activity,
+              Colors.cyan,
+              dark,
+              iconSize: iconSize,
+              valueFontSize: valueFontSize,
+              titleFontSize: titleFontSize,
+            ),
+            _buildStatCard(
+              'Établissements',
+              stats.totalEtablissements.toString(),
+              Iconsax.shop,
+              Colors.indigo,
+              dark,
+              iconSize: iconSize,
+              valueFontSize: valueFontSize,
+              titleFontSize: titleFontSize,
+            ),
+            _buildStatCard(
+              'Utilisateurs',
+              stats.totalUsers.toString(),
+              Iconsax.profile_2user,
+              Colors.pink,
+              dark,
+              iconSize: iconSize,
+              valueFontSize: valueFontSize,
+              titleFontSize: titleFontSize,
+            ),
+          ],
+        );
+      },
     );
   }
 
-  Widget _buildStatCard(String title, String value, IconData icon, Color color, bool dark) {
+  Widget _buildStatCard(
+    String title,
+    String value,
+    IconData icon,
+    Color color,
+    bool dark, {
+    double iconSize = 16,
+    double valueFontSize = 14,
+    double titleFontSize = 10,
+  }) {
     return Container(
-      padding: const EdgeInsets.all(AppSizes.md),
+      padding: const EdgeInsets.symmetric(horizontal: AppSizes.sm, vertical: AppSizes.xs),
       decoration: BoxDecoration(
         color: dark ? AppColors.darkContainer : Colors.white,
-        borderRadius: BorderRadius.circular(AppSizes.cardRadiusLg),
+        borderRadius: BorderRadius.circular(AppSizes.cardRadiusSm),
         border: Border.all(color: color.withOpacity(0.2)),
         boxShadow: [
           BoxShadow(
             color: color.withOpacity(0.1),
-            blurRadius: 8,
-            offset: const Offset(0, 2),
+            blurRadius: 4,
+            offset: const Offset(0, 1),
           ),
         ],
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.center,
         children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Icon(icon, color: color, size: 24),
-              Container(
-                padding: const EdgeInsets.all(4),
-                decoration: BoxDecoration(
-                  color: color.withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(4),
+          Container(
+            padding: EdgeInsets.all(iconSize * 0.4),
+            decoration: BoxDecoration(
+              color: color.withOpacity(0.1),
+              borderRadius: BorderRadius.circular(6),
+            ),
+            child: Icon(icon, color: color, size: iconSize),
+          ),
+          const SizedBox(width: AppSizes.xs),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisAlignment: MainAxisAlignment.center,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  value,
+                  style: Theme.of(Get.context!).textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.bold,
+                    color: color,
+                    fontSize: valueFontSize,
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                 ),
-                child: Icon(icon, color: color, size: 16),
-              ),
-            ],
-          ),
-          const Spacer(),
-          Text(
-            value,
-            style: Theme.of(Get.context!).textTheme.headlineSmall?.copyWith(
-              fontWeight: FontWeight.bold,
-              color: color,
+                Text(
+                  title,
+                  style: Theme.of(Get.context!).textTheme.bodySmall?.copyWith(
+                    color: Colors.grey,
+                    fontSize: titleFontSize,
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ],
             ),
-          ),
-          Text(
-            title,
-            style: Theme.of(Get.context!).textTheme.bodySmall?.copyWith(
-              color: Colors.grey,
-            ),
-            maxLines: 2,
-            overflow: TextOverflow.ellipsis,
           ),
         ],
       ),
@@ -431,7 +511,7 @@ class AdminDashboardScreen extends StatelessWidget {
                 ],
               ),
             );
-          }).toList(),
+          }),
         ],
       ),
     );
@@ -495,7 +575,7 @@ class AdminDashboardScreen extends StatelessWidget {
                   ),
                 ),
               );
-            }).toList(),
+            }),
         ],
       ),
     );
@@ -558,7 +638,7 @@ class AdminDashboardScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildRecentOrders(DashboardStats stats, bool dark) {
+  Widget _buildTopUsers(DashboardStats stats, bool dark) {
     return Container(
       padding: const EdgeInsets.all(AppSizes.md),
       decoration: BoxDecoration(
@@ -575,53 +655,140 @@ class AdminDashboardScreen extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            'Commandes Récentes',
-            style: Theme.of(Get.context!).textTheme.titleLarge,
+          Row(
+            children: [
+              Icon(Iconsax.profile_2user, color: AppColors.primary),
+              const SizedBox(width: AppSizes.sm),
+              Text(
+                'Utilisateurs les Plus Fidèles',
+                style: Theme.of(Get.context!).textTheme.titleLarge,
+              ),
+            ],
           ),
-          const SizedBox(height: AppSizes.spaceBtwItems),
-          if (stats.recentOrders.isEmpty)
-            const Text('Aucune commande récente')
+          const SizedBox(height: AppSizes.md),
+          if (stats.topUsers.isEmpty)
+            Padding(
+              padding: const EdgeInsets.all(AppSizes.md),
+              child: Center(
+                child: Text(
+                  'Aucun utilisateur trouvé',
+                  style: TextStyle(color: Colors.grey),
+                ),
+              ),
+            )
           else
-            ...stats.recentOrders.map((order) {
-              return Card(
-                margin: const EdgeInsets.only(bottom: AppSizes.spaceBtwItems),
-                child: ListTile(
+            ListView.separated(
+              shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
+              itemCount: stats.topUsers.length,
+              separatorBuilder: (context, index) => const Divider(height: 1),
+              itemBuilder: (context, index) {
+                final user = stats.topUsers[index];
+                final fullName = user['fullName'] as String;
+                final email = user['email'] as String;
+                final orderCount = user['orderCount'] as int;
+                final totalSpent = user['totalSpent'] as double;
+                final profileImageUrl = user['profileImageUrl'] as String?;
+                
+                return ListTile(
+                  contentPadding: const EdgeInsets.symmetric(
+                    horizontal: AppSizes.sm,
+                    vertical: AppSizes.xs,
+                  ),
                   leading: CircleAvatar(
-                    backgroundColor: _getStatusColor(order['status'] as String).withOpacity(0.1),
-                    child: Icon(
-                      Iconsax.shopping_bag,
-                      color: _getStatusColor(order['status'] as String),
-                    ),
+                    radius: 20,
+                    backgroundImage: profileImageUrl != null && profileImageUrl.isNotEmpty
+                        ? NetworkImage(profileImageUrl)
+                        : null,
+                    backgroundColor: AppColors.primary.withOpacity(0.1),
+                    child: profileImageUrl == null || profileImageUrl.isEmpty
+                        ? Text(
+                            fullName.isNotEmpty ? fullName[0].toUpperCase() : 'U',
+                            style: const TextStyle(fontWeight: FontWeight.bold),
+                          )
+                        : null,
                   ),
-                  title: Text('Commande #${(order['id'] as String).substring(0, 8)}'),
-                  subtitle: Text(
-                    order['etablissement_name'] as String? ?? 'N/A',
-                    style: const TextStyle(fontSize: 12),
+                  title: Text(
+                    fullName,
+                    style: const TextStyle(fontWeight: FontWeight.w600),
                   ),
-                  trailing: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    crossAxisAlignment: CrossAxisAlignment.end,
+                  subtitle: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(
-                        '${(order['total_amount'] as num?)?.toDouble().toStringAsFixed(2)} DT',
-                        style: const TextStyle(
-                          fontWeight: FontWeight.bold,
-                          color: AppColors.primary,
-                        ),
-                      ),
-                      Text(
-                        _getStatusLabel(order['status'] as String),
-                        style: TextStyle(
-                          fontSize: 12,
-                          color: _getStatusColor(order['status'] as String),
-                        ),
+                      Text(email, style: TextStyle(fontSize: 12, color: Colors.grey)),
+                      const SizedBox(height: 4),
+                      Row(
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                            decoration: BoxDecoration(
+                              color: AppColors.primary.withOpacity(0.1),
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                const Icon(Iconsax.shopping_bag, size: 14, color: AppColors.primary),
+                                const SizedBox(width: 4),
+                                Text(
+                                  '$orderCount commande${orderCount > 1 ? 's' : ''}',
+                                  style: const TextStyle(
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.bold,
+                                    color: AppColors.primary,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                            decoration: BoxDecoration(
+                              color: Colors.green.withOpacity(0.1),
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                const Icon(Iconsax.dollar_circle, size: 14, color: Colors.green),
+                                const SizedBox(width: 4),
+                                Text(
+                                  '${totalSpent.toStringAsFixed(2)} DT',
+                                  style: const TextStyle(
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.bold,
+                                    color: Colors.green,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
                       ),
                     ],
                   ),
-                ),
-              );
-            }).toList(),
+                  trailing: Container(
+                    width: 32,
+                    height: 32,
+                    decoration: BoxDecoration(
+                      color: AppColors.primary.withOpacity(0.1),
+                      shape: BoxShape.circle,
+                    ),
+                    child: Center(
+                      child: Text(
+                        '${index + 1}',
+                        style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                          color: AppColors.primary,
+                          fontSize: 14,
+                        ),
+                      ),
+                    ),
+                  ),
+                );
+              },
+            ),
         ],
       ),
     );
@@ -643,25 +810,6 @@ class AdminDashboardScreen extends StatelessWidget {
         return 'Refusée';
       default:
         return status;
-    }
-  }
-
-  Color _getStatusColor(String status) {
-    switch (status) {
-      case 'pending':
-        return Colors.amber;
-      case 'preparing':
-        return Colors.blue;
-      case 'ready':
-        return Colors.cyan;
-      case 'delivered':
-        return Colors.green;
-      case 'cancelled':
-        return Colors.red;
-      case 'refused':
-        return Colors.red;
-      default:
-        return Colors.grey;
     }
   }
 
@@ -764,7 +912,7 @@ class AdminDashboardScreen extends StatelessWidget {
                   ],
                 ),
               );
-            }).toList(),
+            }),
         ],
       ),
     );
@@ -869,7 +1017,7 @@ class AdminDashboardScreen extends StatelessWidget {
                   ],
                 ),
               );
-            }).toList(),
+            }),
         ],
       ),
     );

@@ -212,7 +212,8 @@ class CheckoutScreen extends StatelessWidget {
               TextButton(
                 onPressed: () => TLoaders.warningSnackBar(
                   title: 'Erreur',
-                  message: 'L\'établissement n\'est pas défini pour ce produit.',
+                  message:
+                      'L\'établissement n\'est pas défini pour ce produit.',
                 ),
                 child: const Text(
                   "Choisir un créneau",
@@ -351,7 +352,8 @@ class CheckoutScreen extends StatelessWidget {
                 if (product.etablissementId.isEmpty) {
                   TLoaders.warningSnackBar(
                     title: 'Erreur',
-                    message: 'L\'établissement n\'est pas défini pour ce produit.',
+                    message:
+                        'L\'établissement n\'est pas défini pour ce produit.',
                   );
                   return;
                 }
@@ -386,7 +388,7 @@ class CheckoutScreen extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      "${orderController.selectedDay.value!}",
+                      orderController.selectedDay.value!,
                       style: TextStyle(
                         color: Colors.green.shade800,
                         fontWeight: FontWeight.w600,
@@ -394,7 +396,7 @@ class CheckoutScreen extends StatelessWidget {
                       ),
                     ),
                     Text(
-                      "${orderController.selectedSlot.value!}",
+                      orderController.selectedSlot.value!,
                       style: TextStyle(
                         color: Colors.green.shade700,
                         fontWeight: FontWeight.w500,
@@ -446,50 +448,52 @@ class CheckoutScreen extends StatelessWidget {
         orderController.selectedDay.value == null) {
       // Calculer le temps de préparation de la commande
       final preparationTime = cartController.calculerTempsPreparation();
-      
+
       // Calculer et définir un créneau par défaut (1h + 15 min + temps de préparation)
       final creneauValide = await orderController.calculerCreneauParDefaut(
         preparationTime,
         etablissementId,
       );
-      
+
       if (!creneauValide) {
         // L'établissement est fermé au créneau calculé
         TLoaders.errorSnackBar(
           title: 'Établissement fermé',
-          message: 'L\'établissement est fermé au créneau proposé. Veuillez choisir un créneau de retrait manuellement.',
+          message:
+              'L\'établissement est fermé au créneau proposé. Veuillez choisir un créneau de retrait manuellement.',
         );
         return;
       }
-      
+
       // Afficher un message informatif
       TLoaders.successSnackBar(
         title: 'Créneau automatique',
-        message: 'Un créneau de retrait a été automatiquement défini pour vous : ${orderController.selectedDay.value!} - ${orderController.selectedSlot.value!}',
+        message:
+            'Un créneau de retrait a été automatiquement défini pour vous : ${orderController.selectedDay.value!} - ${orderController.selectedSlot.value!}',
       );
     }
-    
+
     final selectedAddressId = addressController.selectedAddress.value.id;
 
     // Calculate pickupDateTime based on selected day
     final now = DateTime.now();
     final selectedDayName = orderController.selectedDay.value!;
-    
+
     // Convert day name to JourSemaine enum and get weekday
     final jourSemaine = THelperFunctions.stringToJourSemaine(selectedDayName);
     final targetWeekday = THelperFunctions.weekdayFromJour(jourSemaine);
     final daysToAdd = (targetWeekday - now.weekday + 7) % 7;
     // If today and it's late (after 10 PM), move to next week
-    final chosenDate = daysToAdd == 0 && now.hour >= 22 
+    final chosenDate = daysToAdd == 0 && now.hour >= 22
         ? now.add(const Duration(days: 7))
         : now.add(Duration(days: daysToAdd));
-    
+
     final startParts = orderController.selectedSlot.value!
         .split(' - ')[0]
         .split(':')
         .map(int.parse)
         .toList();
-    
+
     final pickupDateTime = DateTime(
       chosenDate.year,
       chosenDate.month,

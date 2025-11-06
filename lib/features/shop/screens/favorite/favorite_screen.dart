@@ -2,7 +2,6 @@ import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:caferesto/common/widgets/appbar/appbar.dart';
-import 'package:caferesto/common/widgets/icons/t_circular_icon.dart';
 import 'package:caferesto/common/widgets/products/product_cards/product_card_vertical.dart';
 import 'package:caferesto/common/widgets/shimmer/vertical_product_shimmer.dart';
 import 'package:caferesto/features/shop/controllers/product/favorites_controller.dart';

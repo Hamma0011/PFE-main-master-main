@@ -17,7 +17,7 @@ class ImagesController extends GetxController {
     Set<String> images = {};
 
     // Load thmbnail image
-    if (product.imageUrl!.isNotEmpty) {
+    if (product.imageUrl.isNotEmpty) {
       images.add(product.imageUrl);
     }
 

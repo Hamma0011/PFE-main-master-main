@@ -707,7 +707,7 @@ class OrderController extends GetxController {
       // Restaurer le stock des produits si la commande était en attente
       try {
         debugPrint(
-            '🔄 Début de la restauration du stock pour l\'annulation de la commande ${orderId}');
+            '🔄 Début de la restauration du stock pour l\'annulation de la commande $orderId');
         await _augmenterStockCommande(order.items);
         debugPrint('✅ Stock restauré avec succès');
       } catch (e, stackTrace) {
@@ -986,7 +986,7 @@ class OrderController extends GetxController {
 
       // Créer le message de notification avec le nom de l'établissement
       final message =
-          'Nouvelle commande reçue pour $etablissementName : ${totalItems} article${totalItems > 1 ? 's' : ''} pour un montant total de ${order.totalAmount.toStringAsFixed(2)} DT';
+          'Nouvelle commande reçue pour $etablissementName : $totalItems article${totalItems > 1 ? 's' : ''} pour un montant total de ${order.totalAmount.toStringAsFixed(2)} DT';
 
       // Envoyer la notification au gérant
       await _db.from('notifications').insert({

@@ -63,9 +63,10 @@ class AddNewAddressScreen extends StatelessWidget {
                           FlutterMap(
                             mapController: controller.mapController,
                             options: MapOptions(
-                              initialCenter: controller.selectedLocation.value ??
-                                  LatLng(36.8065, 10.1815),
-                              initialZoom : 12,
+                              initialCenter:
+                                  controller.selectedLocation.value ??
+                                      LatLng(36.8065, 10.1815),
+                              initialZoom: 12,
                               onTap: (tapPosition, latLng) =>
                                   controller.setMapAddress(latLng),
                             ),
@@ -83,7 +84,7 @@ class AddNewAddressScreen extends StatelessWidget {
                                       point: controller.selectedLocation.value!,
                                       width: 40,
                                       height: 40,
-                                      child : const Icon(
+                                      child: const Icon(
                                         Icons.location_pin,
                                         color: Colors.red,
                                         size: 40,
@@ -132,7 +133,7 @@ class AddNewAddressScreen extends StatelessWidget {
 
                                   // Move map to location
                                   controller.mapController
-                                      ?.move(currentLatLng, 15);
+                                      .move(currentLatLng, 15);
                                 } catch (e) {
                                   print('Erreur localisation: $e');
                                   Get.snackbar('Erreur',

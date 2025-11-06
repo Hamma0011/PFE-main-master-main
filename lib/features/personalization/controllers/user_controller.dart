@@ -16,9 +16,12 @@ class UserController extends GetxController {
       return Get.put(UserController(), permanent: true);
     }
   }
+
   String get userRole => user.value.role;
   String? get currentEtablissementId => user.value.establishmentId;
-  bool get hasEtablissement => user.value.establishmentId != null && user.value.establishmentId!.isNotEmpty;
+  bool get hasEtablissement =>
+      user.value.establishmentId != null &&
+      user.value.establishmentId!.isNotEmpty;
 
   final profileLoading = false.obs;
   Rx<UserModel> user = UserModel.empty().obs;
@@ -32,13 +35,13 @@ class UserController extends GetxController {
   @override
   void onInit() {
     super.onInit();
-    
+
     // Charger l'utilisateur immédiatement si une session existe déjà
     final currentSession = Supabase.instance.client.auth.currentSession;
     if (currentSession != null) {
       fetchUserRecord();
     }
-    
+
     // Listener sur l'état de connexion Supabase pour les changements futurs
     Supabase.instance.client.auth.onAuthStateChange.listen((data) {
       final session = data.session;
@@ -56,10 +59,10 @@ class UserController extends GetxController {
     try {
       profileLoading.value = true;
       final userData = await userRepository.fetchUserDetails();
-      
+
       if (userData != null) {
         // Ne mettre à jour que si on a réussi à récupérer les données
-        this.user(userData);
+        user(userData);
       } else {
         // Si l'utilisateur n'existe pas en base, ne pas écraser avec un utilisateur vide
         // Garder l'utilisateur actuel si disponible
@@ -69,9 +72,9 @@ class UserController extends GetxController {
       // Ne pas écraser l'utilisateur existant en cas d'erreur
       // Garder l'utilisateur actuel si disponible
       debugPrint("Erreur lors du chargement de l'utilisateur: $e");
-      
+
       // Seulement afficher un message si l'utilisateur n'était pas déjà chargé
-      if (this.user.value.id.isEmpty) {
+      if (user.value.id.isEmpty) {
         debugPrint('Impossible de récupérer les données utilisateur');
       }
     } finally {
@@ -155,7 +158,7 @@ class UserController extends GetxController {
   Future<String?> getUserFullName(String userId) async {
     try {
       if (userId.isEmpty) return null;
-      
+
       final userData = await userRepository.fetchUserDetails(userId);
       if (userData != null) {
         return userData.fullName;

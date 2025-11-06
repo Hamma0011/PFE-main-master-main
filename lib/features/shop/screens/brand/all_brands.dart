@@ -2,7 +2,6 @@ import 'package:caferesto/common/widgets/appbar/appbar.dart';
 import 'package:caferesto/common/widgets/brands/brand_card.dart';
 import 'package:caferesto/common/widgets/layouts/grid_layout.dart';
 import 'package:caferesto/common/widgets/texts/section_heading.dart';
-import 'package:caferesto/features/shop/controllers/brand_controller.dart';
 import 'package:caferesto/features/shop/controllers/etablissement_controller.dart';
 import 'package:caferesto/features/shop/screens/brand/brand_products.dart';
 import 'package:caferesto/utils/constants/sizes.dart';

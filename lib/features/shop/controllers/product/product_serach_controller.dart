@@ -84,13 +84,13 @@ class ProductSearchController extends GetxController {
       final matchesCategory = (product.categoryId).toLowerCase().contains(term);
 
       // Recherche dans les tailles/prix pour produits variables
-      final matchesSizes = product.sizesPrices?.any(
+      final matchesSizes = product.sizesPrices.any(
               (sizePrice) => sizePrice.size.toLowerCase().contains(term)) ??
           false;
 
       // Recherche dans les suppléments
       final matchesSupplements = product.supplements
-              ?.any((supplement) => supplement.toLowerCase().contains(term)) ??
+              .any((supplement) => supplement.toLowerCase().contains(term)) ??
           false;
 
       if (matchesName ||

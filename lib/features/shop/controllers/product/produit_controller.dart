@@ -301,12 +301,13 @@ class ProduitController extends GetxController {
 
     try {
       isLoading.value = true;
-      
+
       // Si l'utilisateur est Admin, préserver l'établissement original du produit
       final userRole = userController.user.value.role;
       if (userRole == 'Admin') {
         // Récupérer le produit original depuis la base de données
-        final originalProduct = await produitRepository.getProductById(produit.id);
+        final originalProduct =
+            await produitRepository.getProductById(produit.id);
         if (originalProduct != null) {
           // Préserver l'établissement original
           produit = produit.copyWith(
@@ -314,7 +315,7 @@ class ProduitController extends GetxController {
           );
         }
       }
-      
+
       await produitRepository.updateProduct(produit);
       await loadProductsByRole();
       Get.back(result: true);
@@ -359,7 +360,8 @@ class ProduitController extends GetxController {
           }
           productsWithEtab.add(finalProduct);
         } catch (e) {
-          debugPrint('Erreur lors du chargement de l\'établissement pour le produit ${produit.id}: $e');
+          debugPrint(
+              'Erreur lors du chargement de l\'établissement pour le produit ${produit.id}: $e');
           // Ajouter le produit même si l'établissement n'a pas pu être chargé
           productsWithEtab.add(produit);
         }
@@ -459,10 +461,8 @@ class ProduitController extends GetxController {
           .eq('id', produit.etablissementId)
           .single();
 
-      if (etabResponse != null) {
-        final etab = Etablissement.fromJson(etabResponse);
-        return produit.copyWith(etablissement: etab);
-      }
+      final etab = Etablissement.fromJson(etabResponse);
+      return produit.copyWith(etablissement: etab);
     } catch (e) {
       debugPrint('Erreur chargement établissement pour produit: $e');
     }
@@ -644,7 +644,7 @@ class ProduitController extends GetxController {
         days: 30,
         limit: 100, // Limite plus élevée pour la page "Tous les produits"
       );
-      
+
       // Charger l'établissement pour chaque produit si manquant avec gestion d'erreur
       final productsWithEtab = <ProduitModel>[];
       for (final produit in products) {
@@ -656,15 +656,17 @@ class ProduitController extends GetxController {
           }
           productsWithEtab.add(finalProduct);
         } catch (e) {
-          debugPrint('Erreur lors du chargement de l\'établissement pour le produit ${produit.id}: $e');
+          debugPrint(
+              'Erreur lors du chargement de l\'établissement pour le produit ${produit.id}: $e');
           // Ajouter le produit même si l'établissement n'a pas pu être chargé
           productsWithEtab.add(produit);
         }
       }
-      
+
       return productsWithEtab;
     } catch (e) {
-      debugPrint('Erreur lors du chargement de tous les produits populaires: $e');
+      debugPrint(
+          'Erreur lors du chargement de tous les produits populaires: $e');
       // Ne pas afficher de snackbar pour éviter de spammer l'utilisateur
       return [];
     }
@@ -694,9 +696,9 @@ class ProduitController extends GetxController {
       if (product.productType == 'single') {
         // Si promo active
         if (product.salePrice > 0 && product.salePrice < product.price) {
-          return "${product.salePrice.toStringAsFixed(2)}";
+          return product.salePrice.toStringAsFixed(2);
         }
-        return "${product.price.toStringAsFixed(2)}";
+        return product.price.toStringAsFixed(2);
       }
 
       // PRODUIT AVEC VARIANTES / TAILLES
@@ -708,14 +710,14 @@ class ProduitController extends GetxController {
 
         // Si toutes les tailles ont le même prix → un seul affichage
         if (minPrice == maxPrice) {
-          return "${minPrice.toStringAsFixed(2)}";
+          return minPrice.toStringAsFixed(2);
         }
 
         // Sinon afficher une plage
-        return "${minPrice.toStringAsFixed(2)}";
+        return minPrice.toStringAsFixed(2);
       }
 
-      return "${product.price.toStringAsFixed(2)}";
+      return product.price.toStringAsFixed(2);
     } catch (e) {
       return "0.00";
     }

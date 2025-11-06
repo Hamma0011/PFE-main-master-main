@@ -26,6 +26,7 @@ class DashboardStats {
   final int ordersThisMonth;
   final List<Map<String, dynamic>> ordersByDay; // Jour avec le plus de commandes
   final List<Map<String, dynamic>> pickupHours; // Heures de pickup les plus fréquentes
+  final List<Map<String, dynamic>> topUsers; // Top 10 utilisateurs les plus fidèles
 
   DashboardStats({
     required this.totalOrders,
@@ -47,6 +48,7 @@ class DashboardStats {
     required this.ordersThisMonth,
     required this.ordersByDay,
     required this.pickupHours,
+    required this.topUsers,
   });
 }
 
@@ -183,6 +185,9 @@ class DashboardController extends GetxController {
       // Statistiques des heures de pickup
       final pickupHours = _calculatePickupHours(allOrders);
 
+      // Top 10 utilisateurs les plus fidèles
+      final topUsers = await _calculateTopUsers(allOrders);
+
       stats.value = DashboardStats(
         totalOrders: totalOrders,
         pendingOrders: pendingOrders,
@@ -203,6 +208,7 @@ class DashboardController extends GetxController {
         ordersThisMonth: ordersThisMonth,
         ordersByDay: ordersByDay,
         pickupHours: pickupHours,
+        topUsers: topUsers,
       );
     } catch (e) {
       debugPrint('Erreur chargement stats admin: $e');
@@ -339,6 +345,9 @@ class DashboardController extends GetxController {
       // Statistiques des heures de pickup
       final pickupHours = _calculatePickupHours(allOrders);
 
+      // Top 10 utilisateurs les plus fidèles (pour cet établissement)
+      final topUsers = await _calculateTopUsers(allOrders);
+
       stats.value = DashboardStats(
         totalOrders: totalOrders,
         pendingOrders: pendingOrders,
@@ -359,6 +368,7 @@ class DashboardController extends GetxController {
         ordersThisMonth: ordersThisMonth,
         ordersByDay: ordersByDay,
         pickupHours: pickupHours,
+        topUsers: topUsers,
       );
     } catch (e) {
       debugPrint('Erreur chargement stats gérant: $e');
@@ -547,6 +557,95 @@ class DashboardController extends GetxController {
       default:
         return 'Inconnu';
     }
+  }
+
+  /// Calcule les top 10 utilisateurs les plus fidèles (avec le plus de commandes)
+  Future<List<Map<String, dynamic>>> _calculateTopUsers(List allOrders) async {
+    final userOrderCounts = <String, int>{};
+    final userTotalSpent = <String, double>{};
+    
+    // Compter les commandes et calculer le total dépensé par utilisateur
+    for (var order in allOrders) {
+      final userId = order['user_id']?.toString() ?? '';
+      if (userId.isEmpty) continue;
+      
+      // Exclure les commandes annulées ou refusées
+      final status = order['status']?.toString() ?? '';
+      if (status == 'cancelled' || status == 'refused') continue;
+      
+      userOrderCounts[userId] = (userOrderCounts[userId] ?? 0) + 1;
+      
+      final totalAmount = (order['total_amount'] as num?)?.toDouble() ?? 0.0;
+      userTotalSpent[userId] = (userTotalSpent[userId] ?? 0.0) + totalAmount;
+    }
+    
+    // Trier par nombre de commandes décroissant et prendre le top 10
+    final sortedUsers = userOrderCounts.entries.toList()
+      ..sort((a, b) => b.value.compareTo(a.value));
+    
+    final topUserIds = sortedUsers.take(10).map((e) => e.key).toList();
+    
+    // Enrichir avec les informations des utilisateurs
+    final enrichedUsers = <Map<String, dynamic>>[];
+    
+    for (var userId in topUserIds) {
+      try {
+        final userResponse = await _db
+            .from('users')
+            .select('id, first_name, last_name, email, phone, profile_image_url')
+            .eq('id', userId)
+            .maybeSingle();
+        
+        if (userResponse != null) {
+          final firstName = userResponse['first_name']?.toString() ?? '';
+          final lastName = userResponse['last_name']?.toString() ?? '';
+          final email = userResponse['email']?.toString() ?? 'N/A';
+          final phone = userResponse['phone']?.toString() ?? 'N/A';
+          final profileImageUrl = userResponse['profile_image_url']?.toString();
+          
+          enrichedUsers.add({
+            'userId': userId,
+            'firstName': firstName,
+            'lastName': lastName,
+            'fullName': '$firstName $lastName'.trim().isEmpty ? 'Utilisateur' : '$firstName $lastName',
+            'email': email,
+            'phone': phone,
+            'profileImageUrl': profileImageUrl,
+            'orderCount': userOrderCounts[userId] ?? 0,
+            'totalSpent': userTotalSpent[userId] ?? 0.0,
+          });
+        } else {
+          // Utilisateur supprimé mais avec des commandes
+          enrichedUsers.add({
+            'userId': userId,
+            'firstName': '',
+            'lastName': '',
+            'fullName': 'Utilisateur supprimé',
+            'email': 'N/A',
+            'phone': 'N/A',
+            'profileImageUrl': null,
+            'orderCount': userOrderCounts[userId] ?? 0,
+            'totalSpent': userTotalSpent[userId] ?? 0.0,
+          });
+        }
+      } catch (e) {
+        debugPrint('Erreur enrichissement utilisateur $userId: $e');
+        // En cas d'erreur, garder les données de base
+        enrichedUsers.add({
+          'userId': userId,
+          'firstName': '',
+          'lastName': '',
+          'fullName': 'Erreur de chargement',
+          'email': 'N/A',
+          'phone': 'N/A',
+          'profileImageUrl': null,
+          'orderCount': userOrderCounts[userId] ?? 0,
+          'totalSpent': userTotalSpent[userId] ?? 0.0,
+        });
+      }
+    }
+    
+    return enrichedUsers;
   }
 }
 

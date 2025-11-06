@@ -1,5 +1,4 @@
 import 'package:caferesto/common/widgets/brands/brand_show_case.dart';
-import 'package:caferesto/features/shop/controllers/brand_controller.dart';
 import 'package:caferesto/features/shop/controllers/etablissement_controller.dart';
 import 'package:caferesto/features/shop/models/category_model.dart';
 import 'package:caferesto/utils/constants/sizes.dart';

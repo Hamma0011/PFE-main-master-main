@@ -1,5 +1,4 @@
 import 'dart:io';
-import 'dart:typed_data';
 
 import 'package:caferesto/utils/exceptions/supabase_exception.dart';
 import 'package:flutter/foundation.dart';

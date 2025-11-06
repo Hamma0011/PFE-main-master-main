@@ -439,7 +439,7 @@ class _ListProduitScreenState extends State<ListProduitScreen> {
             children: [
               const SizedBox(width: 4),
               Text(
-                '$categoryName',
+                categoryName,
                 style: TextStyle(
                   fontSize: 12,
                   color: Colors.blue[600],

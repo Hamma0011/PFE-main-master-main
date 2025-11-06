@@ -313,7 +313,7 @@ class _SearchOverlayState extends State<SearchOverlay> {
                   overflow: TextOverflow.ellipsis,
                 ),
               );
-            }).toList(),
+            }),
           ],
           onChanged: controller.onCategorySelected,
         ));
@@ -352,7 +352,7 @@ class _SearchOverlayState extends State<SearchOverlay> {
                   overflow: TextOverflow.ellipsis,
                 ),
               );
-            }).toList(),
+            }),
           ],
           onChanged: controller.onEtablissementSelected,
         ));
@@ -384,7 +384,7 @@ class _SearchOverlayState extends State<SearchOverlay> {
                 value: sort,
                 child: Text(sort, style: const TextStyle(color: Colors.white)),
               );
-            }).toList(),
+            }),
           ],
           onChanged: controller.onSortSelected,
         ));

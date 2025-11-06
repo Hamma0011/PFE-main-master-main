@@ -148,7 +148,7 @@ class _AddProduitScreenState extends State<AddProduitScreen>
   Future<void> _pickMultipleImages() async {
     try {
       final picked = await ImagePicker().pickMultiImage(imageQuality: 80);
-      if (picked != null && picked.isNotEmpty) {
+      if (picked.isNotEmpty) {
         setState(() => _images.addAll(picked.map((x) => x.path)));
       }
     } catch (e) {
@@ -184,10 +184,10 @@ class _AddProduitScreenState extends State<AddProduitScreen>
           },
         );
       } else if (widget.produit?.imageUrl != null &&
-          widget.produit!.imageUrl!.isNotEmpty) {
+          widget.produit!.imageUrl.isNotEmpty) {
         return ClipRRect(
           borderRadius: borderRadius,
-          child: Image.network(widget.produit!.imageUrl!,
+          child: Image.network(widget.produit!.imageUrl,
               fit: BoxFit.cover, width: previewWidth, height: previewHeight),
         );
       } else {
@@ -546,7 +546,7 @@ class _AddProduitScreenState extends State<AddProduitScreen>
 
     final userRole = UserController.instance.userRole;
     String? etabId;
-    
+
     // Si on modifie un produit et que l'utilisateur est Admin,
     // on préserve l'établissement original du produit
     if (_isEditing && userRole == 'Admin' && widget.produit != null) {

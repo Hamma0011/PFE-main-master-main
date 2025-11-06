@@ -73,7 +73,9 @@ class TProductMetaData extends StatelessWidget {
           children: [
             const TProductTitleText(title: "Statut :"),
             const SizedBox(width: AppSizes.spaceBtwItems),
-            Text(controller.getProductStockStatus(product.stockQuantity, isStockable: product.isStockable),
+            Text(
+                controller.getProductStockStatus(product.stockQuantity,
+                    isStockable: product.isStockable),
                 style: Theme.of(context).textTheme.titleLarge),
           ],
         ),
@@ -85,57 +87,42 @@ class TProductMetaData extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.center,
           children: [
             /// Safe Circular Image with fallback and layout-safe wrapping
-            if (product.etablissementId !=
-                null /*&& product.etablissementId!.image.isNotEmpty*/)
-              LayoutBuilder(
-                builder: (context, constraints) {
-                  return ClipOval(
-                    child: Image.network(
-                      product.etablissement?.imageUrl ?? '', //.image,
-                      width: 32,
-                      height: 32,
-                      fit: BoxFit.cover,
-                      errorBuilder: (context, error, stackTrace) {
-                        return Container(
-                          width: 32,
-                          height: 32,
-                          color: Colors.grey.shade300,
-                          child: Icon(Icons.image_not_supported, size: 16),
-                        );
-                      },
-                      loadingBuilder: (context, child, progress) {
-                        if (progress == null) return child;
-                        return SizedBox(
-                          width: 32,
-                          height: 32,
-                          child: Center(
-                            child: CircularProgressIndicator(
-                              strokeWidth: 2,
-                              value: progress.expectedTotalBytes != null
-                                  ? progress.cumulativeBytesLoaded /
-                                      progress.expectedTotalBytes!
-                                  : null,
-                            ),
+            LayoutBuilder(
+              builder: (context, constraints) {
+                return ClipOval(
+                  child: Image.network(
+                    product.etablissement?.imageUrl ?? '', //.image,
+                    width: 32,
+                    height: 32,
+                    fit: BoxFit.cover,
+                    errorBuilder: (context, error, stackTrace) {
+                      return Container(
+                        width: 32,
+                        height: 32,
+                        color: Colors.grey.shade300,
+                        child: Icon(Icons.image_not_supported, size: 16),
+                      );
+                    },
+                    loadingBuilder: (context, child, progress) {
+                      if (progress == null) return child;
+                      return SizedBox(
+                        width: 32,
+                        height: 32,
+                        child: Center(
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            value: progress.expectedTotalBytes != null
+                                ? progress.cumulativeBytesLoaded /
+                                    progress.expectedTotalBytes!
+                                : null,
                           ),
-                        );
-                      },
-                    ),
-                  );
-                },
-              )
-            else
-
-              /// Fallback when no image is present
-              Container(
-                width: 32,
-                height: 32,
-                decoration: const BoxDecoration(
-                  shape: BoxShape.circle,
-                  color: Colors.grey,
-                ),
-                child: const Icon(Icons.image_not_supported,
-                    size: 16, color: Colors.white),
-              ),
+                        ),
+                      );
+                    },
+                  ),
+                );
+              },
+            ),
 
             const SizedBox(width: AppSizes.spaceBtwItems),
 

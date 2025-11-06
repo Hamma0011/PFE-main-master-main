@@ -109,11 +109,9 @@ class ProduitRepository extends GetxController {
 
       // Fallback: essayer avec une requête plus simple
       try {
-        final simpleQuery = _db
-            .from(_table)
-            .select('*')
-            .eq('categorie_id', categoryId);
-        
+        final simpleQuery =
+            _db.from(_table).select('*').eq('categorie_id', categoryId);
+
         if (limit > 0) {
           simpleQuery.limit(limit);
         }
@@ -149,8 +147,6 @@ class ProduitRepository extends GetxController {
           .order('name', ascending: true);
 
       final response = limit == -1 ? await query : await query.limit(limit);
-
-      if (response == null) return [];
 
       return (response as List<dynamic>)
           .map((json) => ProduitModel.fromJson(json))
@@ -250,8 +246,9 @@ class ProduitRepository extends GetxController {
   /// Mettre à jour le stock d'un produit à une valeur absolue
   Future<void> setProductStock(String productId, int newStock) async {
     try {
-      debugPrint('📦 setProductStock appelé pour $productId avec nouvelle valeur: $newStock');
-      
+      debugPrint(
+          '📦 setProductStock appelé pour $productId avec nouvelle valeur: $newStock');
+
       // Récupérer le produit actuel
       final product = await _db
           .from(_table)
@@ -259,12 +256,8 @@ class ProduitRepository extends GetxController {
           .eq('id', productId)
           .single();
 
-      if (product == null) {
-        throw 'Produit non trouvé';
-      }
-
       final isStockable = product['est_stockable'] as bool? ?? false;
-      
+
       debugPrint('📦 Produit $productId - est stockable: $isStockable');
 
       // Ne mettre à jour que si le produit est stockable
@@ -275,7 +268,7 @@ class ProduitRepository extends GetxController {
 
       // S'assurer que le stock ne devienne pas négatif
       final finalStock = newStock < 0 ? 0 : newStock;
-      
+
       debugPrint('📦 Produit $productId - nouveau stock: $finalStock');
 
       final response = await _db
@@ -283,10 +276,12 @@ class ProduitRepository extends GetxController {
           .update({'quantite_stock': finalStock})
           .eq('id', productId)
           .select();
-      
-      debugPrint('📦 Stock mis à jour avec succès pour $productId. Réponse: $response');
+
+      debugPrint(
+          '📦 Stock mis à jour avec succès pour $productId. Réponse: $response');
     } on PostgrestException catch (e) {
-      debugPrint('❌ Erreur Postgres lors de la mise à jour du stock: ${e.code} - ${e.message}');
+      debugPrint(
+          '❌ Erreur Postgres lors de la mise à jour du stock: ${e.code} - ${e.message}');
       throw 'Erreur base de données : ${e.code} - ${e.message}';
     } catch (e, stackTrace) {
       debugPrint('❌ Erreur lors de la mise à jour du stock: $e');
@@ -298,8 +293,9 @@ class ProduitRepository extends GetxController {
   /// Mettre à jour le stock d'un produit (changement relatif)
   Future<void> updateProductStock(String productId, int quantityChange) async {
     try {
-      debugPrint('📦 updateProductStock appelé pour $productId avec changement: $quantityChange');
-      
+      debugPrint(
+          '📦 updateProductStock appelé pour $productId avec changement: $quantityChange');
+
       // Récupérer le produit actuel
       final product = await _db
           .from(_table)
@@ -307,14 +303,11 @@ class ProduitRepository extends GetxController {
           .eq('id', productId)
           .single();
 
-      if (product == null) {
-        throw 'Produit non trouvé';
-      }
-
       final currentStock = product['quantite_stock'] as int? ?? 0;
       final isStockable = product['est_stockable'] as bool? ?? false;
-      
-      debugPrint('📦 Produit $productId - stock actuel: $currentStock, est stockable: $isStockable');
+
+      debugPrint(
+          '📦 Produit $productId - stock actuel: $currentStock, est stockable: $isStockable');
 
       // Ne mettre à jour que si le produit est stockable
       if (!isStockable) {
@@ -323,21 +316,24 @@ class ProduitRepository extends GetxController {
       }
 
       final newStock = currentStock + quantityChange;
-      
+
       // S'assurer que le stock ne devienne pas négatif
       final finalStock = newStock < 0 ? 0 : newStock;
-      
-      debugPrint('📦 Produit $productId - nouveau stock: $finalStock (ancien: $currentStock, changement: $quantityChange)');
+
+      debugPrint(
+          '📦 Produit $productId - nouveau stock: $finalStock (ancien: $currentStock, changement: $quantityChange)');
 
       final response = await _db
           .from(_table)
           .update({'quantite_stock': finalStock})
           .eq('id', productId)
           .select();
-      
-      debugPrint('📦 Stock mis à jour avec succès pour $productId. Réponse: $response');
+
+      debugPrint(
+          '📦 Stock mis à jour avec succès pour $productId. Réponse: $response');
     } on PostgrestException catch (e) {
-      debugPrint('❌ Erreur Postgres lors de la mise à jour du stock: ${e.code} - ${e.message}');
+      debugPrint(
+          '❌ Erreur Postgres lors de la mise à jour du stock: ${e.code} - ${e.message}');
       throw 'Erreur base de données : ${e.code} - ${e.message}';
     } catch (e, stackTrace) {
       debugPrint('❌ Erreur lors de la mise à jour du stock: $e');
@@ -381,10 +377,6 @@ class ProduitRepository extends GetxController {
           .limit(8)
           .order('created_at', ascending: false);
 
-      if (response == null) {
-        throw Exception('Aucune réponse reçue de Supabase.');
-      }
-
       final data = response as List<dynamic>;
 
       // Convertit les résultats en objets ProduitModel
@@ -408,10 +400,6 @@ class ProduitRepository extends GetxController {
           .eq('is_featured', true)
           .order('created_at', ascending: false);
 
-      if (response == null) {
-        throw Exception('Aucune réponse reçue de Supabase.');
-      }
-
       final data = response as List<dynamic>;
 
       // Convertit les résultats en objets ProduitModel
@@ -434,29 +422,29 @@ class ProduitRepository extends GetxController {
   }) async {
     try {
       final orderRepository = OrderRepository.instance;
-      
+
       // Récupérer les IDs et quantités des produits les plus commandés
       final mostOrdered = await orderRepository.getMostOrderedProducts(
         days: days,
         limit: limit,
       );
-      
+
       if (mostOrdered.isEmpty) {
         return [];
       }
-      
+
       // Récupérer les IDs des produits et filtrer les IDs vides ou invalides
       final productIds = mostOrdered
           .map((e) => e['productId']?.toString())
           .where((id) => id != null && id.isNotEmpty)
           .cast<String>()
           .toList();
-      
+
       if (productIds.isEmpty) {
         debugPrint('Aucun ID de produit valide trouvé');
         return [];
       }
-      
+
       // Récupérer les détails complets des produits avec gestion d'erreur
       List<dynamic> productsResponse;
       try {
@@ -477,24 +465,27 @@ class ProduitRepository extends GetxController {
                 .maybeSingle();
             if (productResponse != null) {
               try {
-                products.add(ProduitModel.fromMap(Map<String, dynamic>.from(productResponse)));
+                products.add(ProduitModel.fromMap(
+                    Map<String, dynamic>.from(productResponse)));
               } catch (parseError) {
-                debugPrint('Erreur lors du parsing du produit $productId: $parseError');
+                debugPrint(
+                    'Erreur lors du parsing du produit $productId: $parseError');
               }
             }
           } catch (singleError) {
-            debugPrint('Erreur lors de la récupération du produit $productId: $singleError');
+            debugPrint(
+                'Erreur lors de la récupération du produit $productId: $singleError');
             continue;
           }
         }
         if (products.isEmpty) return [];
         return _sortProductsByQuantity(products, mostOrdered);
       }
-      
+
       if (productsResponse.isEmpty) {
         return [];
       }
-      
+
       // Convertir en ProduitModel avec gestion d'erreur pour chaque produit
       final products = <ProduitModel>[];
       for (final productData in productsResponse) {
@@ -508,14 +499,15 @@ class ProduitRepository extends GetxController {
           continue;
         }
       }
-      
+
       if (products.isEmpty) {
         return [];
       }
-      
+
       return _sortProductsByQuantity(products, mostOrdered);
     } catch (e) {
-      debugPrint('Erreur lors de la récupération des produits les plus commandés: $e');
+      debugPrint(
+          'Erreur lors de la récupération des produits les plus commandés: $e');
       // Retourner une liste vide au lieu de lever une exception pour éviter de crasher l'app
       return [];
     }
@@ -534,14 +526,14 @@ class ProduitRepository extends GetxController {
         quantityMap[productId] = (e['totalQuantity'] as num?)?.toInt() ?? 0;
       }
     }
-    
+
     // Trier les produits selon l'ordre des quantités (plus commandés en premier)
     products.sort((a, b) {
       final qtyA = quantityMap[a.id] ?? 0;
       final qtyB = quantityMap[b.id] ?? 0;
       return qtyB.compareTo(qtyA);
     });
-    
+
     return products;
   }
 

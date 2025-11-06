@@ -16,8 +16,8 @@ class PickUpSlotPicker extends StatelessWidget {
   PickUpSlotPicker({
     required this.onSlotSelected,
     this.slotDurationMinutes = 30, // 30 minutes par défaut
-    Key? key,
-  }) : super(key: key);
+    super.key,
+  });
 
   @override
   Widget build(BuildContext context) {

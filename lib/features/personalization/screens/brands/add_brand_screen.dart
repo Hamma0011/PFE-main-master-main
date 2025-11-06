@@ -1,5 +1,4 @@
 import 'dart:convert';
-import 'dart:typed_data';
 
 import 'package:caferesto/utils/constants/colors.dart';
 import 'package:caferesto/utils/constants/sizes.dart';
@@ -355,7 +354,7 @@ class _AddEtablissementScreenState extends State<AddEtablissementScreen>
       ),
     ]);
   }
-  
+
   Widget _buildCoordinatesSection(double width) {
     final isWide = width >= 900;
     final dark = THelperFunctions.isDarkMode(context);

@@ -400,55 +400,51 @@ class _EditEtablissementScreenState extends State<EditEtablissementScreen>
         const Text('Statut de l\'établissement',
             style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
         const SizedBox(height: 12),
-        LayoutBuilder(
-          builder: (context, constraints) {
-            return ConstrainedBox(
-              constraints: BoxConstraints(
-                maxWidth: constraints.maxWidth
+        LayoutBuilder(builder: (context, constraints) {
+          return ConstrainedBox(
+            constraints: BoxConstraints(maxWidth: constraints.maxWidth),
+            child: DropdownButtonFormField<StatutEtablissement>(
+              isExpanded: true,
+              value: _selectedStatut,
+              decoration: const InputDecoration(
+                border: OutlineInputBorder(),
+                labelText: 'Statut',
+                prefixIcon: Icon(Icons.info_outline),
               ),
-              child: DropdownButtonFormField<StatutEtablissement>(
-                isExpanded: true,
-                value: _selectedStatut,
-                decoration: const InputDecoration(
-                  border: OutlineInputBorder(),
-                  labelText: 'Statut',
-                  prefixIcon: Icon(Icons.info_outline),
-                ),
-                items: StatutEtablissement.values.map((statut) {
-                  return DropdownMenuItem<StatutEtablissement>(
-                    value: statut,
-                    child: Row(
-                      children: [
-                        Container(
-                          width: 12,
-                          height: 12,
-                          decoration: BoxDecoration(
-                            color: _getStatutColor(statut),
-                            shape: BoxShape.circle,
-                          ),
+              items: StatutEtablissement.values.map((statut) {
+                return DropdownMenuItem<StatutEtablissement>(
+                  value: statut,
+                  child: Row(
+                    children: [
+                      Container(
+                        width: 12,
+                        height: 12,
+                        decoration: BoxDecoration(
+                          color: _getStatutColor(statut),
+                          shape: BoxShape.circle,
                         ),
-                        const SizedBox(width: 12),
-                        Flexible(
-                            child: Text(
-                          _getStatutText(statut),
-                          overflow: TextOverflow.ellipsis,
-                          maxLines: 1,
-                        )),
-                      ],
-                    ),
-                  );
-                }).toList(),
-                onChanged: (newStatut) {
-                  if (newStatut != null) {
-                    setState(() {
-                      _selectedStatut = newStatut;
-                    });
-                  }
-                },
-              ),
-            );
-          }
-        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Flexible(
+                          child: Text(
+                        _getStatutText(statut),
+                        overflow: TextOverflow.ellipsis,
+                        maxLines: 1,
+                      )),
+                    ],
+                  ),
+                );
+              }).toList(),
+              onChanged: (newStatut) {
+                if (newStatut != null) {
+                  setState(() {
+                    _selectedStatut = newStatut;
+                  });
+                }
+              },
+            ),
+          );
+        }),
       ],
     );
   }
@@ -565,7 +561,7 @@ class _EditEtablissementScreenState extends State<EditEtablissementScreen>
           ),
         ),
         const SizedBox(height: 12),
-        ...horairesOuverts.take(3).map(_buildHorairePreview).toList(),
+        ...horairesOuverts.take(3).map(_buildHorairePreview),
         if (horairesOuverts.length > 3)
           Padding(
             padding: const EdgeInsets.only(top: 8),

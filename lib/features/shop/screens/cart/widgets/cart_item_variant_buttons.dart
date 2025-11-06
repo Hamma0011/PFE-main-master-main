@@ -6,6 +6,7 @@ import '../../../models/cart_item_model.dart';
 
 class CartItemVariantButtons extends StatelessWidget {
   const CartItemVariantButtons({
+    super.key,
     required this.cartItem,
     required this.controller,
     required this.onEdit,
@@ -34,7 +35,8 @@ class CartItemVariantButtons extends StatelessWidget {
       );
 
       // Vérifie si toutes les variations du produit sont déjà dans le panier
-      final allVariationsInCart = controller.sontToutesVariationsDansPanier(product);
+      final allVariationsInCart =
+          controller.sontToutesVariationsDansPanier(product);
 
       return Row(
         children: [

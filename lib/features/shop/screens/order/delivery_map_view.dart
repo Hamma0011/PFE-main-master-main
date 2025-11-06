@@ -124,7 +124,7 @@ class _DeliveryMapViewState extends State<DeliveryMapView> {
   String _formatTravelTime(double milliseconds) {
     final totalMinutes = (milliseconds / 60000).round();
     if (totalMinutes < 60) {
-      return '${totalMinutes} min';
+      return '$totalMinutes min';
     } else {
       final hours = totalMinutes ~/ 60;
       final minutes = totalMinutes % 60;

@@ -298,9 +298,9 @@ class CategorySubmitButton extends StatelessWidget {
           ),
           shadowColor: Colors.blue.withOpacity(0.3),
         ).copyWith(
-          elevation: MaterialStateProperty.resolveWith<double>(
-            (Set<MaterialState> states) {
-              if (states.contains(MaterialState.pressed)) return 0;
+          elevation: WidgetStateProperty.resolveWith<double>(
+            (Set<WidgetState> states) {
+              if (states.contains(WidgetState.pressed)) return 0;
               return 8;
             },
           ),

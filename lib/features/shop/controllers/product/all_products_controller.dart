@@ -50,11 +50,12 @@ class AllProductsController extends GetxController {
     try {
       isLoading.value = true;
       final all = await repository.getAllProducts();
-      
+
       // Charger l'établissement pour chaque produit si manquant
       final allWithEtab = await Future.wait(
         all.map((produit) async {
-          if (produit.etablissement == null && produit.etablissementId.isNotEmpty) {
+          if (produit.etablissement == null &&
+              produit.etablissementId.isNotEmpty) {
             return await _loadEtablissementForProduct(produit);
           }
           return produit;
@@ -138,7 +139,8 @@ class AllProductsController extends GetxController {
       final produitsWithEtab = await Future.wait(
         produits.map((produit) async {
           if (produit.etablissement == null) {
-            return await _loadEtablissementForBrandProduct(produit, etablissementId);
+            return await _loadEtablissementForBrandProduct(
+                produit, etablissementId);
           }
           return produit;
         }),
@@ -231,7 +233,8 @@ class AllProductsController extends GetxController {
   }
 
   /// Charger l'établissement pour un produit si manquant
-  Future<ProduitModel> _loadEtablissementForProduct(ProduitModel produit) async {
+  Future<ProduitModel> _loadEtablissementForProduct(
+      ProduitModel produit) async {
     if (produit.etablissement != null || produit.etablissementId.isEmpty) {
       return produit;
     }
@@ -243,10 +246,8 @@ class AllProductsController extends GetxController {
           .eq('id', produit.etablissementId)
           .single();
 
-      if (etabResponse != null) {
-        final etab = Etablissement.fromJson(etabResponse);
-        return produit.copyWith(etablissement: etab);
-      }
+      final etab = Etablissement.fromJson(etabResponse);
+      return produit.copyWith(etablissement: etab);
     } catch (e) {
       print('Erreur chargement établissement pour produit: $e');
     }
@@ -270,7 +271,8 @@ class AllProductsController extends GetxController {
           if (eventType == PostgresChangeEvent.insert) {
             var produit = ProduitModel.fromMap(newData);
             // Charger l'établissement si manquant
-            if (produit.etablissement == null && produit.etablissementId.isNotEmpty) {
+            if (produit.etablissement == null &&
+                produit.etablissementId.isNotEmpty) {
               produit = await _loadEtablissementForProduct(produit);
             }
             final index = products.indexWhere((p) => p.id == produit.id);
@@ -284,7 +286,8 @@ class AllProductsController extends GetxController {
           } else if (eventType == PostgresChangeEvent.update) {
             var produit = ProduitModel.fromMap(newData);
             // Charger l'établissement si manquant
-            if (produit.etablissement == null && produit.etablissementId.isNotEmpty) {
+            if (produit.etablissement == null &&
+                produit.etablissementId.isNotEmpty) {
               produit = await _loadEtablissementForProduct(produit);
             }
             final index = products.indexWhere((p) => p.id == produit.id);
@@ -323,10 +326,8 @@ class AllProductsController extends GetxController {
           .eq('id', etablissementId)
           .single();
 
-      if (etabResponse != null) {
-        final etab = Etablissement.fromJson(etabResponse);
-        return produit.copyWith(etablissement: etab);
-      }
+      final etab = Etablissement.fromJson(etabResponse);
+      return produit.copyWith(etablissement: etab);
     } catch (e) {
       print('Erreur chargement établissement pour produit marque: $e');
     }
@@ -337,7 +338,8 @@ class AllProductsController extends GetxController {
   void _subscribeToBrandProducts(String etablissementId) {
     _unsubscribeFromBrandProducts();
 
-    _brandProductsChannel = _supabase.channel('brand_products_changes_$etablissementId');
+    _brandProductsChannel =
+        _supabase.channel('brand_products_changes_$etablissementId');
 
     _brandProductsChannel!.onPostgresChanges(
       event: PostgresChangeEvent.all,
@@ -357,8 +359,10 @@ class AllProductsController extends GetxController {
           if (eventType == PostgresChangeEvent.insert) {
             var produit = ProduitModel.fromMap(newData);
             // Charger l'établissement si manquant
-            if (produit.etablissement == null && produit.etablissementId.isNotEmpty) {
-              produit = await _loadEtablissementForBrandProduct(produit, etablissementId);
+            if (produit.etablissement == null &&
+                produit.etablissementId.isNotEmpty) {
+              produit = await _loadEtablissementForBrandProduct(
+                  produit, etablissementId);
             }
             final index = brandProducts.indexWhere((p) => p.id == produit.id);
             if (index == -1) {
@@ -371,8 +375,10 @@ class AllProductsController extends GetxController {
           } else if (eventType == PostgresChangeEvent.update) {
             var produit = ProduitModel.fromMap(newData);
             // Charger l'établissement si manquant
-            if (produit.etablissement == null && produit.etablissementId.isNotEmpty) {
-              produit = await _loadEtablissementForBrandProduct(produit, etablissementId);
+            if (produit.etablissement == null &&
+                produit.etablissementId.isNotEmpty) {
+              produit = await _loadEtablissementForBrandProduct(
+                  produit, etablissementId);
             }
             final index = brandProducts.indexWhere((p) => p.id == produit.id);
             if (index != -1) {
@@ -388,7 +394,8 @@ class AllProductsController extends GetxController {
             }
           }
         } catch (e) {
-          print('Erreur traitement changement produit établissement temps réel: $e');
+          print(
+              'Erreur traitement changement produit établissement temps réel: $e');
         }
       },
     );

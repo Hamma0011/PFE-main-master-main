@@ -26,6 +26,7 @@ class OTPVerificationController extends GetxController {
   final RxBool isSignupFlow = true.obs;
   Map<String, dynamic> userData = {};
 
+  @override
   void onInit() {
     super.onInit();
 
