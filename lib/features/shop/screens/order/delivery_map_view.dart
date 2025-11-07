@@ -727,7 +727,7 @@ class _DeliveryMapViewState extends State<DeliveryMapView> {
                       ),
                       width: isMobile ? 50 : 60,
                       height: isMobile ? 50 : 60,
-                      child: Icon(Icons.person,
+                      child: Icon(Icons.home,
                           color: Colors.blue, size: isMobile ? 30 : 36),
                     )
                   else if (widget.order.address?.latitude != 0.0 &&
@@ -739,7 +739,7 @@ class _DeliveryMapViewState extends State<DeliveryMapView> {
                       ),
                       width: isMobile ? 50 : 60,
                       height: isMobile ? 50 : 60,
-                      child: Icon(Icons.home,
+                      child: Icon(Icons.person_pin,
                           color: Colors.blue, size: isMobile ? 30 : 36),
                     ),
                 ],
