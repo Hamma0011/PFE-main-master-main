@@ -71,7 +71,8 @@ class UserController extends GetxController {
       if (userData != null) {
         // Mettre à jour avec les données de la base de données
         user(userData);
-        debugPrint("✅ Utilisateur chargé depuis la base de données - Rôle: ${userData.role}");
+        debugPrint(
+            "✅ Utilisateur chargé depuis la base de données - Rôle: ${userData.role}");
       } else {
         // Si l'utilisateur n'existe pas en base, ne pas écraser avec un utilisateur vide
         // Garder l'utilisateur actuel si disponible

@@ -33,7 +33,7 @@ class PickUpSlotPicker extends StatelessWidget {
         mainAxisSize: MainAxisSize.min,
         children: [
           const Text(
-            '🕓 Choisir un créneau de retrait',
+            ' Choisir un créneau de retrait',
             style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
           ),
           const SizedBox(height: 12),

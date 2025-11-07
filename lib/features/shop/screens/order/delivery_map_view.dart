@@ -727,7 +727,7 @@ class _DeliveryMapViewState extends State<DeliveryMapView> {
                       ),
                       width: isMobile ? 50 : 60,
                       height: isMobile ? 50 : 60,
-                      child: Icon(Icons.home,
+                      child: Icon(Icons.person,
                           color: Colors.blue, size: isMobile ? 30 : 36),
                     )
                   else if (widget.order.address?.latitude != 0.0 &&
@@ -843,7 +843,7 @@ class _DeliveryMapViewState extends State<DeliveryMapView> {
       // Vérifier les permissions de localisation
       bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
       if (!serviceEnabled) {
-        debugPrint('❌ Les services de localisation sont désactivés');
+        debugPrint(' Les services de localisation sont désactivés');
         return null;
       }
 
@@ -851,19 +851,19 @@ class _DeliveryMapViewState extends State<DeliveryMapView> {
       if (permission == LocationPermission.denied) {
         permission = await Geolocator.requestPermission();
         if (permission == LocationPermission.denied) {
-          debugPrint('❌ Les permissions de localisation sont refusées');
+          debugPrint(' Les permissions de localisation sont refusées');
           return null;
         }
       }
 
       if (permission == LocationPermission.deniedForever) {
         debugPrint(
-            '❌ Les permissions de localisation sont définitivement refusées');
+            ' Les permissions de localisation sont définitivement refusées');
         return null;
       }
 
       // Obtenir la position actuelle
-      debugPrint('📍 Demande de la position GPS actuelle...');
+      debugPrint(' Demande de la position GPS actuelle...');
       final position = await Geolocator.getCurrentPosition(
         desiredAccuracy: LocationAccuracy.high,
         timeLimit: const Duration(seconds: 10),

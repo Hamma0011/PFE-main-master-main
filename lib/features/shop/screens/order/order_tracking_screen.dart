@@ -64,8 +64,6 @@ class OrderTrackingScreen extends StatelessWidget {
                           textColor),
                       _infoColumn(
                           "Date commande", order.formattedOrderDate, textColor),
-                      _infoColumn("Date livraison", order.formattedDeliveryDate,
-                          textColor),
                     ],
                   ),
                 ],
@@ -137,24 +135,26 @@ class OrderTrackingScreen extends StatelessWidget {
                     itemBuilder: (_, index) {
                       final item = order.items[index];
                       // Déterminer si l'image est valide (URL réseau ou asset)
-                      final hasValidImage = item.image != null && 
-                                          item.image!.isNotEmpty &&
-                                          (item.image!.startsWith('http://') || 
-                                           item.image!.startsWith('https://') ||
-                                           item.image!.startsWith('assets/'));
-                      
+                      final hasValidImage = item.image != null &&
+                          item.image!.isNotEmpty &&
+                          (item.image!.startsWith('http://') ||
+                              item.image!.startsWith('https://') ||
+                              item.image!.startsWith('assets/'));
+
                       return Row(
                         children: [
                           ClipRRect(
                             borderRadius: BorderRadius.circular(8),
                             child: hasValidImage
-                                ? item.image!.startsWith('http://') || item.image!.startsWith('https://')
+                                ? item.image!.startsWith('http://') ||
+                                        item.image!.startsWith('https://')
                                     ? Image.network(
                                         item.image!,
                                         width: 50,
                                         height: 50,
                                         fit: BoxFit.cover,
-                                        errorBuilder: (context, error, stackTrace) {
+                                        errorBuilder:
+                                            (context, error, stackTrace) {
                                           return _buildPlaceholderImage();
                                         },
                                       )
@@ -163,7 +163,8 @@ class OrderTrackingScreen extends StatelessWidget {
                                         width: 50,
                                         height: 50,
                                         fit: BoxFit.cover,
-                                        errorBuilder: (context, error, stackTrace) {
+                                        errorBuilder:
+                                            (context, error, stackTrace) {
                                           return _buildPlaceholderImage();
                                         },
                                       )
@@ -208,7 +209,8 @@ class OrderTrackingScreen extends StatelessWidget {
               child: ElevatedButton.icon(
                 onPressed: () {
                   // Vérifier que l'établissement est disponible avant de naviguer
-                  if (order.etablissement == null && order.etablissementId.isEmpty) {
+                  if (order.etablissement == null &&
+                      order.etablissementId.isEmpty) {
                     Get.snackbar(
                       'Erreur',
                       'Les données de livraison ne sont pas disponibles',
