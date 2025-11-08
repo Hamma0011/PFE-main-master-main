@@ -173,25 +173,30 @@ class OrderController extends GetxController {
       String title = "";
       String message = "";
 
+      // Utiliser le code de retrait si disponible, sinon utiliser l'ID tronqué
+      final orderCode = order.codeRetrait != null && order.codeRetrait!.isNotEmpty
+          ? order.codeRetrait!
+          : order.id.substring(0, 8).toUpperCase();
+
       switch (newStatus) {
         case OrderStatus.preparing:
           title = "Commande en préparation";
           message =
-              "Votre commande #${order.id.substring(0, 8)} est en cours de préparation.";
+              "Votre commande (Code: $orderCode) est en cours de préparation.";
           break;
         case OrderStatus.ready:
           title = "Commande prête";
           message =
-              "Votre commande #${order.id.substring(0, 8)} est prête pour retrait.";
+              "Votre commande (Code: $orderCode) est prête pour retrait.";
           break;
         case OrderStatus.delivered:
           title = "Commande livrée";
-          message = "Votre commande #${order.id.substring(0, 8)} a été livrée.";
+          message = "Votre commande (Code: $orderCode) a été livrée.";
           break;
         case OrderStatus.refused:
           title = "Commande refusée";
           message =
-              "Votre commande #${order.id.substring(0, 8)} a été refusée. Raison: $refusalReason";
+              "Votre commande (Code: $orderCode) a été refusée. Raison: $refusalReason";
           break;
         default:
           return;
@@ -605,6 +610,10 @@ class OrderController extends GetxController {
               'ℹ️ Créneau horaire choisi manuellement, pas de calcul d\'heure d\'arrivée nécessaire');
         }
 
+        // Générer le code de retrait avant de créer la commande
+        final codeRetrait = await orderRepository.generateCodeRetrait(etablissementId);
+        debugPrint('🏷️ Code de retrait généré: $codeRetrait');
+
         // Créer une nouvelle commande
         final order = OrderModel(
           id: '', // Laisser la base de données générer l'UUID
@@ -625,6 +634,7 @@ class OrderController extends GetxController {
           preparationTime: preparationTime,
           clientArrivalTime:
               clientArrivalTime, // Heure d'arrivée réelle calculée via GraphHopper
+          codeRetrait: codeRetrait, // Code de retrait généré
         );
 
         // Log de débogage pour l'heure d'arrivée qui sera enregistrée
@@ -797,12 +807,17 @@ class OrderController extends GetxController {
       if (etablissementResponse != null) {
         final gerantId = etablissementResponse['id_owner']?.toString() ?? '';
         if (gerantId.isNotEmpty) {
+          // Utiliser le code de retrait si disponible
+          final orderCode = order.codeRetrait != null && order.codeRetrait!.isNotEmpty
+              ? order.codeRetrait!
+              : orderId.substring(0, 8).toUpperCase();
+          
           // Notifier le gérant
           await _db.from('notifications').insert({
             'user_id': gerantId,
             'title': 'Commande modifiée',
             'message':
-                'Le client a modifié la commande #${orderId.substring(0, 8)}. Nouveau total: ${totalAmount.toStringAsFixed(2)} DT',
+                'Le client a modifié la commande (Code: $orderCode). Nouveau total: ${totalAmount.toStringAsFixed(2)} DT',
             'read': false,
             'etablissement_id': order.etablissementId,
             'receiver_role': 'gérant',
@@ -863,11 +878,16 @@ class OrderController extends GetxController {
         'updated_at': DateTime.now().toIso8601String(),
       });
 
+      // Utiliser le code de retrait si disponible
+      final orderCode = order.codeRetrait != null && order.codeRetrait!.isNotEmpty
+          ? order.codeRetrait!
+          : orderId.substring(0, 8).toUpperCase();
+      
       // Envoyer une notification à l'établissement
       await _envoyerNotification(
         userId: order.etablissementId, // Cela va à l'établissement
         title: "Commande annulée",
-        message: "Le client a annulé la commande #${orderId.substring(0, 8)}",
+        message: "Le client a annulé la commande (Code: $orderCode)",
         etablissementId: order.etablissementId,
         receiverRole: 'gérant',
       );
@@ -1010,12 +1030,17 @@ class OrderController extends GetxController {
         'updated_at': DateTime.now().toIso8601String(),
       });
 
+      // Utiliser le code de retrait si disponible
+      final orderCode = order.codeRetrait != null && order.codeRetrait!.isNotEmpty
+          ? order.codeRetrait!
+          : orderId.substring(0, 8).toUpperCase();
+      
       // Envoyer une notification à l'établissement
       await _envoyerNotification(
         userId: order.etablissementId,
         title: "Commande modifiée",
         message:
-            "Le client a modifié le créneau de retrait pour la commande #${orderId.substring(0, 8)}",
+            "Le client a modifié le créneau de retrait pour la commande (Code: $orderCode)",
         etablissementId: order.etablissementId,
         receiverRole: 'gérant',
       );

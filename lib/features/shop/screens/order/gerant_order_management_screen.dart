@@ -426,7 +426,9 @@ class _GerantOrderManagementScreenState
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          'Commande #${order.id.substring(0, 8).toUpperCase()}',
+                          order.codeRetrait != null && order.codeRetrait!.isNotEmpty
+                              ? 'Commande ${order.codeRetrait}'
+                              : 'Commande',
                           style:
                               Theme.of(context).textTheme.titleLarge?.copyWith(
                                     fontWeight: FontWeight.bold,

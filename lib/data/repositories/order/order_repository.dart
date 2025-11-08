@@ -41,6 +41,12 @@ class OrderRepository extends GetxController {
         throw 'Etablissement ID is missing for this order.';
       }
 
+      // Générer le code de retrait si non fourni
+      String? codeRetrait = order.codeRetrait;
+      if (codeRetrait == null || codeRetrait.isEmpty) {
+        codeRetrait = await generateCodeRetrait(order.etablissementId);
+      }
+
       // Convert to JSON and add user/etablissement IDs
       await _db.from('orders').insert({
         'user_id': order.userId,
@@ -57,6 +63,7 @@ class OrderRepository extends GetxController {
         'updated_at': order.updatedAt?.toIso8601String(),
         'preparation_time': order.preparationTime,
         'client_arrival_time': order.clientArrivalTime,
+        'code_retrait': codeRetrait,
       }).select();
     } on PostgrestException catch (e) {
       print('Postgres error: ${e.message}');
@@ -87,6 +94,59 @@ class OrderRepository extends GetxController {
           .toList();
     } catch (e) {
       throw 'Erreur lors du chargement des commandes: $e';
+    }
+  }
+
+  /// Générer un nouveau code de retrait pour un établissement
+  /// Le code est composé de 4 chiffres (0001, 0002, etc.)
+  /// Chaque établissement a sa propre série
+  /// Cycle : 0001 à 0999, puis retour à 0001
+  Future<String> generateCodeRetrait(String etablissementId) async {
+    try {
+      // Récupérer le dernier code de retrait pour cet établissement
+      // Exclure les commandes annulées/refusées du comptage
+      final response = await _db
+          .from('orders')
+          .select('code_retrait')
+          .eq('etablissement_id', etablissementId)
+          .not('code_retrait', 'is', null)
+          .not('status', 'in', '(cancelled,refused)')
+          .order('created_at', ascending: false)
+          .limit(1);
+
+      final responseList = response as List;
+      if (responseList.isEmpty) {
+        // Premier code pour cet établissement
+        return '0001';
+      }
+
+      final lastOrder = responseList[0] as Map<String, dynamic>;
+      final lastCode = lastOrder['code_retrait'] as String;
+
+      if (lastCode.isEmpty) {
+        // Code vide, commencer à 0001
+        return '0001';
+      }
+
+      // Convertir le dernier code en nombre
+      final lastNumber = int.tryParse(lastCode) ?? 0;
+      
+      // Incrémenter de 1
+      var nextNumber = lastNumber + 1;
+      
+      // Si on arrive à 1000, revenir à 1 (cycle 0001-0999)
+      if (nextNumber >= 1000) {
+        nextNumber = 1;
+      }
+      
+      // Formater en 4 chiffres avec padding à gauche
+      return nextNumber.toString().padLeft(4, '0');
+    } catch (e) {
+      debugPrint('Erreur lors de la génération du code de retrait: $e');
+      // En cas d'erreur, générer un code basé sur le timestamp (fallback)
+      final timestamp = DateTime.now().millisecondsSinceEpoch;
+      final fallbackCode = (timestamp % 999) + 1; // Entre 1 et 999
+      return fallbackCode.toString().padLeft(4, '0');
     }
   }
 

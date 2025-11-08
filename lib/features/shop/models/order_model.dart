@@ -26,6 +26,7 @@ class OrderModel {
   final String? refusalReason;
   final int? preparationTime;
   final String? clientArrivalTime; // Format HH:mm:ss
+  final String? codeRetrait; // Code de retrait (4 chiffres: 0001-0999)
   OrderModel(
       {required this.id,
       required this.userId,
@@ -45,7 +46,8 @@ class OrderModel {
       required this.etablissementId,
       this.refusalReason,
       this.preparationTime,
-      this.clientArrivalTime});
+      this.clientArrivalTime,
+      this.codeRetrait});
 
   // -------------------------
   // Computed / helper getters
@@ -115,6 +117,7 @@ class OrderModel {
     String? refusalReason,
     int? preparationTime,
     String? clientArrivalTime,
+    String? codeRetrait,
   }) {
     return OrderModel(
       id: id ?? this.id,
@@ -136,6 +139,7 @@ class OrderModel {
       refusalReason: refusalReason ?? this.refusalReason,
       preparationTime: preparationTime ?? this.preparationTime,
       clientArrivalTime: clientArrivalTime ?? this.clientArrivalTime,
+      codeRetrait: codeRetrait ?? this.codeRetrait,
     );
   }
 
@@ -164,6 +168,7 @@ class OrderModel {
       'refusal_reason': refusalReason,
       'preparation_time': preparationTime,
       'client_arrival_time': clientArrivalTime,
+      'code_retrait': codeRetrait,
     };
   }
 
@@ -205,6 +210,7 @@ class OrderModel {
           ? (json['preparation_time'] as num).toInt()
           : null,
       clientArrivalTime: json['client_arrival_time'] as String?,
+      codeRetrait: json['code_retrait'] as String?,
     );
   }
 

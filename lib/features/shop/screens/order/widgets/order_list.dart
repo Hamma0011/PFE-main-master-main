@@ -169,11 +169,14 @@ class TOrderListItems extends StatelessWidget {
         Flexible(
           child:
               Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            Text('Commande #${order.id.substring(0, 8).toUpperCase()}',
-                style: Theme.of(context)
-                    .textTheme
-                    .titleLarge
-                    ?.copyWith(fontWeight: FontWeight.bold)),
+            Text(
+              order.codeRetrait != null && order.codeRetrait!.isNotEmpty
+                  ? 'Commande ${order.codeRetrait}'
+                  : 'Commande',
+              style: Theme.of(context)
+                  .textTheme
+                  .titleLarge
+                  ?.copyWith(fontWeight: FontWeight.bold)),
             const SizedBox(height: 4),
             Text(order.formattedOrderDate,
                 style: Theme.of(context)
