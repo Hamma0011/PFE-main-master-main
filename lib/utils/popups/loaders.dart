@@ -54,11 +54,11 @@ class TLoaders {
       isDismissible: true,
       shouldIconPulse: true,
       colorText: Colors.white,
-      backgroundColor: Colors.lightGreenAccent,
-      snackPosition: SnackPosition.TOP,
+      backgroundColor: Colors.blue,
+      snackPosition: SnackPosition.BOTTOM,
       duration: Duration(seconds: duration),
       margin: const EdgeInsets.all(10),
-      icon: const Icon(Iconsax.check, color: AppColors.white),
+      icon: const Icon(Iconsax.info_circle, color: AppColors.white),
     );
   }
 

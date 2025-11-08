@@ -95,10 +95,16 @@ class OTPVerificationController extends GetxController {
 
       // Succès => navigation déjà gérée dans AuthenticationRepository
     } catch (e) {
-      TLoaders.errorSnackBar(
-        title: "Erreur",
-        message: e.toString(),
-      );
+      // Ne pas afficher de snackbar si l'erreur est liée à un utilisateur banni
+      // car le snackbar est déjà affiché dans AuthenticationRepository
+      final errorMessage = e.toString();
+      if (!errorMessage.contains('BannedUserException') && 
+          !errorMessage.contains('banni')) {
+        TLoaders.errorSnackBar(
+          title: "Erreur",
+          message: errorMessage,
+        );
+      }
     } finally {
       isLoading.value = false;
     }

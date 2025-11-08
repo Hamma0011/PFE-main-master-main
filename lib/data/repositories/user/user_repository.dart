@@ -131,4 +131,84 @@ class UserRepository extends GetxController {
       throw 'Something went wrong in removeUserRecord: $e';
     }
   }
+
+  /// Récupérer tous les utilisateurs (pour Admin)
+  Future<List<UserModel>> getAllUsers() async {
+    try {
+      final response = await _client
+          .from(_table)
+          .select()
+          .order('created_at', ascending: false);
+
+      return (response as List)
+          .map((json) => UserModel.fromJson(json))
+          .toList();
+    } on PostgrestException catch (e) {
+      throw Exception('Erreur lors de la récupération des utilisateurs: ${e.message}');
+    } catch (e) {
+      throw Exception('Erreur inconnue getAllUsers: $e');
+    }
+  }
+
+  /// Bannir un utilisateur
+  Future<bool> banUser(String userId) async {
+    try {
+      final response = await _client
+          .from(_table)
+          .update({'is_banned': true})
+          .eq('id', userId)
+          .select();
+
+      if (response.isEmpty) throw 'Ban failed.';
+      
+      // Note: La déconnexion sera gérée automatiquement lors de la prochaine
+      // tentative de connexion grâce à la vérification dans AuthenticationRepository
+      
+      return true;
+    } on PostgrestException catch (e) {
+      throw Exception('Erreur PostgrestException banUser: ${e.message}');
+    } catch (e) {
+      throw Exception('Erreur inconnue banUser: $e');
+    }
+  }
+
+  /// Débannir un utilisateur
+  Future<bool> unbanUser(String userId) async {
+    try {
+      final response = await _client
+          .from(_table)
+          .update({'is_banned': false})
+          .eq('id', userId)
+          .select();
+
+      if (response.isEmpty) throw 'Unban failed.';
+      return true;
+    } on PostgrestException catch (e) {
+      throw Exception('Erreur PostgrestException unbanUser: ${e.message}');
+    } catch (e) {
+      throw Exception('Erreur inconnue unbanUser: $e');
+    }
+  }
+
+  /// Mettre à jour le statut de bannissement d'un utilisateur
+  Future<bool> updateUserBanStatus(String userId, bool isBanned) async {
+    try {
+      final response = await _client
+          .from(_table)
+          .update({'is_banned': isBanned})
+          .eq('id', userId)
+          .select();
+
+      if (response.isEmpty) throw 'Update ban status failed.';
+      
+      // Note: La déconnexion sera gérée automatiquement lors de la prochaine
+      // tentative de connexion grâce à la vérification dans AuthenticationRepository
+      
+      return true;
+    } on PostgrestException catch (e) {
+      throw Exception('Erreur PostgrestException updateUserBanStatus: ${e.message}');
+    } catch (e) {
+      throw Exception('Erreur inconnue updateUserBanStatus: $e');
+    }
+  }
 }

@@ -873,7 +873,7 @@ class _DeliveryMapViewState extends State<DeliveryMapView> {
           '✅ Position GPS obtenue: ${position.latitude}, ${position.longitude}');
       return position;
     } catch (e) {
-      debugPrint('❌ Erreur lors de l\'obtention de la position GPS: $e');
+      debugPrint('Erreur lors de l\'obtention de la position GPS: $e');
       return null;
     }
   }

@@ -46,6 +46,12 @@ class _EditCategoryScreenState extends State<EditCategoryScreen>
   }
 
   @override
+  void dispose() {
+    _animationController?.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: _buildAppBar(),
@@ -135,14 +141,19 @@ class _EditCategoryScreenState extends State<EditCategoryScreen>
   Future<void> _saveCategory() async {
     if (!_formKey.currentState!.validate()) return;
 
+    if (!mounted) return;
+
     try {
       final success = await categoryController.editCategory(widget.category);
+
+      if (!mounted) return;
 
       if (success) {
         TLoaders.successSnackBar(message: "Catégorie mise à jour avec succès");
         Get.back();
       }
     } catch (e) {
+      if (!mounted) return;
       TLoaders.errorSnackBar(message: e.toString());
     }
   }

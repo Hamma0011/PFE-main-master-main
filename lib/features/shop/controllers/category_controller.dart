@@ -1,5 +1,5 @@
 import 'dart:io';
-import 'package:flutter/foundation.dart'; // pour kIsWeb
+import 'package:flutter/foundation.dart'; // pour kIsWeb et debugPrint
 
 import 'package:caferesto/features/personalization/controllers/user_controller.dart';
 import 'package:caferesto/data/repositories/categories/category_repository.dart';
@@ -27,8 +27,8 @@ class CategoryController extends GetxController
   }
 
   final formKey = GlobalKey<FormState>();
-  final nameController = TextEditingController();
-  final parentIdController = TextEditingController();
+  TextEditingController nameController = TextEditingController();
+  TextEditingController parentIdController = TextEditingController();
 
   final isFeatured = false.obs;
   final Rx<String?> selectedParentId = Rx<String?>(null);
@@ -45,6 +45,7 @@ class CategoryController extends GetxController
   final _categoryRepository = Get.put(CategoryRepository());
   RxList<CategoryModel> allCategories = <CategoryModel>[].obs;
   RxList<CategoryModel> featuredCategories = <CategoryModel>[].obs;
+  RxList<CategoryModel> topCategoriesBySales = <CategoryModel>[].obs;
   late TabController tabController;
   final RxString searchQuery = ''.obs;
   final Rx<CategoryFilter> selectedFilter = CategoryFilter.all.obs;
@@ -67,10 +68,35 @@ class CategoryController extends GetxController
     }
   }
 
+  void _ensureControllersInitialized() {
+    try {
+      // Vérifier si les contrôleurs peuvent être utilisés en accédant à leur valeur
+      nameController.text;
+    } catch (e) {
+      // Si le contrôleur est disposé, le recréer
+      nameController = TextEditingController();
+    }
+    try {
+      parentIdController.text;
+    } catch (e) {
+      parentIdController = TextEditingController();
+    }
+  }
+
   @override
   void onClose() {
-    nameController.dispose();
-    parentIdController.dispose();
+    // Pour un contrôleur permanent, on ne devrait pas arriver ici
+    // Mais si on y arrive, on dispose proprement
+    try {
+      nameController.dispose();
+    } catch (e) {
+      // Déjà disposé, ignorer
+    }
+    try {
+      parentIdController.dispose();
+    } catch (e) {
+      // Déjà disposé, ignorer
+    }
     super.onClose();
   }
 
@@ -93,8 +119,19 @@ class CategoryController extends GetxController
   }
 
   void clearForm() {
-    nameController.clear();
-    parentIdController.clear();
+    _ensureControllersInitialized();
+    try {
+      nameController.clear();
+    } catch (e) {
+      // Si problème, recréer le contrôleur
+      nameController = TextEditingController();
+    }
+    try {
+      parentIdController.clear();
+    } catch (e) {
+      // Si problème, recréer le contrôleur
+      parentIdController = TextEditingController();
+    }
     isFeatured.value = false;
     pickedImage.value = null;
     pickedImageBytes.value = null;
@@ -109,6 +146,9 @@ class CategoryController extends GetxController
       featuredCategories.assignAll(
         categories.where((cat) => cat.isFeatured).take(8).toList(),
       );
+      
+      // Charger les top catégories par ventes en arrière-plan
+      _loadTopCategoriesBySales();
     } catch (e) {
       TLoaders.errorSnackBar(title: 'Erreur!', message: e.toString());
     } finally {
@@ -116,9 +156,25 @@ class CategoryController extends GetxController
     }
   }
 
+  /// Charger les top catégories par ventes
+  Future<void> _loadTopCategoriesBySales() async {
+    try {
+      final topCategories = await _categoryRepository.getTopCategoriesBySales(
+        days: 30,
+        limit: 8,
+      );
+      topCategoriesBySales.assignAll(topCategories);
+    } catch (e) {
+      debugPrint('Erreur lors du chargement des top catégories par ventes: $e');
+      // Ne pas afficher d'erreur à l'utilisateur, c'est secondaire
+    }
+  }
+
   Future<void> refreshCategories() async {
     isLoading.value = true;
     await fetchCategories();
+    // Recharger aussi les top catégories par ventes
+    await _loadTopCategoriesBySales();
   }
 
   Future<List<CategoryModel>> getSubCategories(String categoryId) async {
@@ -171,9 +227,19 @@ class CategoryController extends GetxController
               ? selectedParentId.value
               : null;
 
+      // S'assurer que le contrôleur est initialisé avant utilisation
+      _ensureControllersInitialized();
+      String categoryName = '';
+      try {
+        categoryName = nameController.text.trim();
+      } catch (e) {
+        TLoaders.errorSnackBar(message: "Erreur lors de la lecture du nom de la catégorie");
+        return;
+      }
+
       final newCategory = CategoryModel(
         id: '',
-        name: nameController.text.trim(),
+        name: categoryName,
         image: imageUrl,
         parentId: parentId,
         isFeatured: isFeatured.value,
@@ -185,8 +251,7 @@ class CategoryController extends GetxController
       clearForm();
       Get.back();
       TLoaders.successSnackBar(
-        message:
-            'Catégorie "${nameController.text.trim()}" ajoutée avec succès',
+        message: 'Catégorie "$categoryName" ajoutée avec succès',
       );
     } catch (e) {
       TLoaders.errorSnackBar(message: e.toString());
@@ -217,23 +282,36 @@ class CategoryController extends GetxController
         imageUrl = await _categoryRepository.uploadCategoryImage(file);
       }
 
+      // Vérifier que le contrôleur n'est pas disposé avant d'accéder à son texte
+      _ensureControllersInitialized();
+      String categoryName = originalCategory.name;
+      try {
+        final nameText = nameController.text.trim();
+        if (nameText.isNotEmpty) {
+          categoryName = nameText;
+        }
+      } catch (e) {
+        // Si le contrôleur est disposé, utiliser le nom original
+        // Le contrôleur sera recréé la prochaine fois
+      }
+
       final updatedCategory = CategoryModel(
         id: originalCategory.id,
-        name: nameController.text.trim(),
+        name: categoryName,
         image: imageUrl,
         parentId: selectedParentId.value,
         isFeatured: isFeatured.value,
       );
 
       await _categoryRepository.updateCategory(updatedCategory);
-      Get.back();
       await fetchCategories();
 
       TLoaders.successSnackBar(
         message: "Catégorie '${updatedCategory.name}' mise à jour avec succès.",
       );
 
-      clearForm();
+      // Ne pas appeler clearForm() ici car le widget pourrait être disposé
+      // Le clearForm sera appelé lors de la prochaine utilisation du formulaire
       return true;
     } catch (e) {
       TLoaders.errorSnackBar(message: e.toString());
@@ -274,7 +352,13 @@ class CategoryController extends GetxController
   }
 
   void initializeForEdit(CategoryModel category) {
-    nameController.text = category.name;
+    _ensureControllersInitialized();
+    try {
+      nameController.text = category.name;
+    } catch (e) {
+      // Si toujours un problème, recréer le contrôleur
+      nameController = TextEditingController(text: category.name);
+    }
     selectedParentId.value = category.parentId;
     isFeatured.value = category.isFeatured;
     pickedImage.value = null;

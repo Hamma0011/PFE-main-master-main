@@ -51,16 +51,8 @@ class AllProductsController extends GetxController {
       isLoading.value = true;
       final all = await repository.getAllProducts();
 
-      // Charger l'établissement pour chaque produit si manquant
-      final allWithEtab = await Future.wait(
-        all.map((produit) async {
-          if (produit.etablissement == null &&
-              produit.etablissementId.isNotEmpty) {
-            return await _loadEtablissementForProduct(produit);
-          }
-          return produit;
-        }),
-      );
+      // Optimisation: Charger tous les établissements manquants en batch
+      final allWithEtab = await _loadEtablissementsBatch(all);
 
       products.assignAll(allWithEtab);
 
@@ -135,16 +127,31 @@ class AllProductsController extends GetxController {
       final produits =
           await repository.getProductsByEtablissement(etablissementId);
 
-      // Charger l'établissement pour chaque produit si manquant
-      final produitsWithEtab = await Future.wait(
-        produits.map((produit) async {
-          if (produit.etablissement == null) {
-            return await _loadEtablissementForBrandProduct(
-                produit, etablissementId);
+      // Optimisation: Charger l'établissement une seule fois pour tous les produits
+      Etablissement? etablissement;
+      if (produits.isNotEmpty && produits.any((p) => p.etablissement == null)) {
+        try {
+          final etabResponse = await _supabase
+              .from('etablissements')
+              .select('*')
+              .eq('id', etablissementId)
+              .maybeSingle();
+          
+          if (etabResponse != null) {
+            etablissement = Etablissement.fromJson(etabResponse);
           }
-          return produit;
-        }),
-      );
+        } catch (e) {
+          print('Erreur chargement établissement pour marque: $e');
+        }
+      }
+
+      // Assigner l'établissement à tous les produits qui en ont besoin
+      final produitsWithEtab = produits.map((produit) {
+        if (produit.etablissement == null && etablissement != null) {
+          return produit.copyWith(etablissement: etablissement);
+        }
+        return produit;
+      }).toList();
 
       // Assigner à la liste réactive
       brandProducts.assignAll(produitsWithEtab);
@@ -232,7 +239,66 @@ class AllProductsController extends GetxController {
     }).toList();
   }
 
-  /// Charger l'établissement pour un produit si manquant
+  /// Charger tous les établissements manquants en batch (optimisation)
+  Future<List<ProduitModel>> _loadEtablissementsBatch(
+      List<ProduitModel> produits) async {
+    // Identifier les produits qui ont besoin d'établissements
+    final produitsNeedingEtab = produits
+        .where((p) => p.etablissement == null && p.etablissementId.isNotEmpty)
+        .toList();
+
+    if (produitsNeedingEtab.isEmpty) {
+      return produits; // Tous les établissements sont déjà chargés
+    }
+
+    // Récupérer tous les IDs d'établissements uniques
+    final etablissementIds = produitsNeedingEtab
+        .map((p) => p.etablissementId)
+        .toSet()
+        .toList();
+
+    if (etablissementIds.isEmpty) {
+      return produits;
+    }
+
+    try {
+      // Charger tous les établissements en UNE seule requête batch
+      final etablissementsResponse = await _supabase
+          .from('etablissements')
+          .select('*')
+          .inFilter('id', etablissementIds);
+
+      // Créer une map pour un accès rapide
+      final etablissementsMap = <String, Etablissement>{};
+      for (var etabData in etablissementsResponse as List) {
+        try {
+          final etab = Etablissement.fromJson(etabData);
+          if (etab.id != null && etab.id!.isNotEmpty) {
+            etablissementsMap[etab.id!] = etab;
+          }
+        } catch (e) {
+          print('Erreur parsing établissement: $e');
+        }
+      }
+
+      // Assigner les établissements aux produits
+      return produits.map((produit) {
+        if (produit.etablissement == null &&
+            produit.etablissementId.isNotEmpty) {
+          final etab = etablissementsMap[produit.etablissementId];
+          if (etab != null) {
+            return produit.copyWith(etablissement: etab);
+          }
+        }
+        return produit;
+      }).toList();
+    } catch (e) {
+      print('Erreur chargement batch établissements: $e');
+      return produits; // Retourner les produits sans établissements en cas d'erreur
+    }
+  }
+
+  /// Charger l'établissement pour un produit si manquant (méthode legacy pour temps réel)
   Future<ProduitModel> _loadEtablissementForProduct(
       ProduitModel produit) async {
     if (produit.etablissement != null || produit.etablissementId.isEmpty) {

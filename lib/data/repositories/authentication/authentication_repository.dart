@@ -14,6 +14,13 @@ import '../../../navigation_menu.dart';
 import '../../../utils/popups/loaders.dart';
 import '../user/user_repository.dart';
 
+/// Exception interne pour identifier les utilisateurs bannis
+/// Cette exception ne doit pas déclencher de snackbar dans le controller
+class _BannedUserException implements Exception {
+  @override
+  String toString() => 'BannedUserException';
+}
+
 class AuthenticationRepository extends GetxController {
   static AuthenticationRepository get instance => Get.find();
 
@@ -37,7 +44,17 @@ class AuthenticationRepository extends GetxController {
           if (pending != null) return;
 
           // Connexion classique
-          await UserRepository.instance.fetchUserDetails();
+          final userDetails = await UserRepository.instance.fetchUserDetails();
+          
+          // Vérifier si l'utilisateur est banni (sans afficher de snackbar ici,
+          // car c'est déjà géré dans verifyOTP qui est le point d'entrée principal)
+          if (userDetails != null && userDetails.isBanned) {
+            // Déconnecter l'utilisateur banni silencieusement
+            await _auth.signOut();
+            Get.offAll(() => const LoginScreen());
+            return;
+          }
+          
           await TLocalStorage.init(session.user.id);
           Get.offAll(() => const NavigationMenu());
         } else if (event == AuthChangeEvent.signedOut) {
@@ -64,6 +81,16 @@ class AuthenticationRepository extends GetxController {
           (meta['email_verified'] == true) || (user.emailConfirmedAt != null);
 
       if (emailVerified) {
+        // Vérifier si l'utilisateur est banni (sans afficher de snackbar ici,
+        // car c'est déjà géré dans verifyOTP qui est le point d'entrée principal)
+        final userDetails = await UserRepository.instance.fetchUserDetails(user.id);
+        if (userDetails != null && userDetails.isBanned) {
+          // Déconnecter l'utilisateur banni silencieusement
+          await _auth.signOut();
+          Get.offAll(() => const LoginScreen());
+          return;
+        }
+        
         await TLocalStorage.init(user.id);
         Get.offAll(() => const NavigationMenu());
       } else {
@@ -193,17 +220,34 @@ class AuthenticationRepository extends GetxController {
               "Aucun utilisateur associé à cet email. Veuillez vous inscrire.");
         }
 
+        // Vérifier si l'utilisateur est banni
+        if (existingUser.isBanned) {
+          // Déconnecter l'utilisateur
+          await _auth.signOut();
+          // Afficher un seul snackbar pour l'utilisateur banni
+          TLoaders.errorSnackBar(
+            title: 'Accès refusé',
+            message: "Votre compte a été banni. Veuillez contacter l'administrateur.",
+          );
+          Get.offAll(() => const LoginScreen());
+          // Lancer une exception spéciale qui sera ignorée dans le controller
+          throw _BannedUserException();
+        }
+
         await TLocalStorage.init(supabaseUser.id);
         await UserController.instance.fetchUserRecord();
 
         Get.offAll(() => const NavigationMenu());
       }
     } catch (e) {
-      TLoaders.errorSnackBar(
-        title: "Erreur Vérification OTP",
-        message: e.toString(),
-      );
-      throw Exception("Erreur verifyOTP: $e");
+      // Si c'est une exception de bannissement, elle est déjà gérée (snackbar affiché)
+      // Ne pas relancer cette exception pour éviter un double snackbar
+      if (e is _BannedUserException) {
+        return; // Sortir silencieusement car le snackbar est déjà affiché
+      }
+      
+      // Pour les autres erreurs, afficher le snackbar dans le controller
+      rethrow;
     }
   }
 

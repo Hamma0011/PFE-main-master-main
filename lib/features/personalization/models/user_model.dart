@@ -15,6 +15,7 @@ class UserModel {
   final DateTime? createdAt;
   final DateTime? updatedAt;
   String? profileImageUrl;
+  final bool isBanned;
 
   /// constructeur
   UserModel({
@@ -32,6 +33,7 @@ class UserModel {
     this.createdAt,
     this.updatedAt,
     this.profileImageUrl,
+    this.isBanned = false,
   });
 
   /// Fonction Helper
@@ -77,6 +79,7 @@ class UserModel {
       'establishment_id': establishmentId,
       'order_ids': orderIds,
       'profile_image_url': profileImageUrl,
+      'is_banned': isBanned,
     };
   }
 
@@ -103,6 +106,7 @@ class UserModel {
           ? DateTime.parse(json['updated_at'])
           : null,
       profileImageUrl: json['profile_image_url'],
+      isBanned: json['is_banned'] ?? false,
     );
   }
 
@@ -116,6 +120,7 @@ class UserModel {
     String? role,
     List<String>? orderIds,
     String? profileImageUrl,
+    bool? isBanned,
   }) {
     return UserModel(
       id: id ?? this.id,
@@ -127,6 +132,7 @@ class UserModel {
       role: role ?? this.role,
       orderIds: orderIds ?? this.orderIds,
       profileImageUrl: profileImageUrl ?? this.profileImageUrl,
+      isBanned: isBanned ?? this.isBanned,
     );
   }
 }

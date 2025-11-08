@@ -86,22 +86,43 @@ class EtablissementRepository {
           .map<Etablissement>((json) => Etablissement.fromJson(json))
           .toList();
 
-      // Compter les produits pour chaque établissement
-      for (int i = 0; i < etablissements.length; i++) {
-        final etablissement = etablissements[i];
-        if (etablissement.id != null && etablissement.id!.isNotEmpty) {
-          try {
-            final countResponse = await _db
-                .from('produits')
-                .select('id')
-                .eq('etablissement_id', etablissement.id!);
-            
-            final count = (countResponse as List).length;
-            etablissements[i] = etablissement.copyWith(nbProduits: count.toDouble());
-          } catch (e) {
-            // En cas d'erreur, laisser nbProduits à 0
-            print('Erreur comptage produits pour établissement ${etablissement.id}: $e');
+      if (etablissements.isEmpty) return etablissements;
+
+      // Optimisation: Compter tous les produits en UNE seule requête batch
+      final etablissementIds = etablissements
+          .map((e) => e.id)
+          .whereType<String>()
+          .where((id) => id.isNotEmpty)
+          .toList();
+
+      if (etablissementIds.isNotEmpty) {
+        try {
+          // Récupérer tous les produits en une seule requête
+          final countsResponse = await _db
+              .from('produits')
+              .select('etablissement_id')
+              .inFilter('etablissement_id', etablissementIds);
+
+          // Compter les produits par établissement
+          final productCounts = <String, int>{};
+          for (var product in countsResponse as List) {
+            final etabId = product['etablissement_id']?.toString() ?? '';
+            if (etabId.isNotEmpty) {
+              productCounts[etabId] = (productCounts[etabId] ?? 0) + 1;
+            }
           }
+
+          // Assigner les comptages
+          for (int i = 0; i < etablissements.length; i++) {
+            final etablissement = etablissements[i];
+            if (etablissement.id != null && etablissement.id!.isNotEmpty) {
+              final count = productCounts[etablissement.id!] ?? 0;
+              etablissements[i] = etablissement.copyWith(nbProduits: count.toDouble());
+            }
+          }
+        } catch (e) {
+          print('Erreur comptage produits batch: $e');
+          // En cas d'erreur, laisser nbProduits à 0 pour tous
         }
       }
 
@@ -126,22 +147,43 @@ class EtablissementRepository {
           .map<Etablissement>((json) => Etablissement.fromJson(json))
           .toList();
 
-      // Compter les produits pour chaque établissement
-      for (int i = 0; i < etablissements.length; i++) {
-        final etablissement = etablissements[i];
-        if (etablissement.id != null && etablissement.id!.isNotEmpty) {
-          try {
-            final countResponse = await _db
-                .from('produits')
-                .select('id')
-                .eq('etablissement_id', etablissement.id!);
-            
-            final count = (countResponse as List).length;
-            etablissements[i] = etablissement.copyWith(nbProduits: count.toDouble());
-          } catch (e) {
-            // En cas d'erreur, laisser nbProduits à 0 (déjà initialisé)
-            print('Erreur comptage produits pour établissement ${etablissement.id}: $e');
+      if (etablissements.isEmpty) return etablissements;
+
+      // Optimisation: Compter tous les produits en UNE seule requête batch
+      final etablissementIds = etablissements
+          .map((e) => e.id)
+          .whereType<String>()
+          .where((id) => id.isNotEmpty)
+          .toList();
+
+      if (etablissementIds.isNotEmpty) {
+        try {
+          // Récupérer tous les produits en une seule requête
+          final countsResponse = await _db
+              .from('produits')
+              .select('etablissement_id')
+              .inFilter('etablissement_id', etablissementIds);
+
+          // Compter les produits par établissement
+          final productCounts = <String, int>{};
+          for (var product in countsResponse as List) {
+            final etabId = product['etablissement_id']?.toString() ?? '';
+            if (etabId.isNotEmpty) {
+              productCounts[etabId] = (productCounts[etabId] ?? 0) + 1;
+            }
           }
+
+          // Assigner les comptages
+          for (int i = 0; i < etablissements.length; i++) {
+            final etablissement = etablissements[i];
+            if (etablissement.id != null && etablissement.id!.isNotEmpty) {
+              final count = productCounts[etablissement.id!] ?? 0;
+              etablissements[i] = etablissement.copyWith(nbProduits: count.toDouble());
+            }
+          }
+        } catch (e) {
+          print('Erreur comptage produits batch: $e');
+          // En cas d'erreur, laisser nbProduits à 0 pour tous
         }
       }
 
@@ -166,22 +208,43 @@ class EtablissementRepository {
           .map<Etablissement>((json) => Etablissement.fromJson(json))
           .toList();
 
-      // Compter les produits pour chaque établissement
-      for (int i = 0; i < etablissements.length; i++) {
-        final etablissement = etablissements[i];
-        if (etablissement.id != null && etablissement.id!.isNotEmpty) {
-          try {
-            final countResponse = await _db
-                .from('produits')
-                .select('id')
-                .eq('etablissement_id', etablissement.id!);
-            
-            final count = (countResponse as List).length;
-            etablissements[i] = etablissement.copyWith(nbProduits: count.toDouble());
-          } catch (e) {
-            // En cas d'erreur, laisser nbProduits à 0
-            print('Erreur comptage produits pour établissement ${etablissement.id}: $e');
+      if (etablissements.isEmpty) return etablissements;
+
+      // Optimisation: Compter tous les produits en UNE seule requête batch
+      final etablissementIds = etablissements
+          .map((e) => e.id)
+          .whereType<String>()
+          .where((id) => id.isNotEmpty)
+          .toList();
+
+      if (etablissementIds.isNotEmpty) {
+        try {
+          // Récupérer tous les produits en une seule requête
+          final countsResponse = await _db
+              .from('produits')
+              .select('etablissement_id')
+              .inFilter('etablissement_id', etablissementIds);
+
+          // Compter les produits par établissement
+          final productCounts = <String, int>{};
+          for (var product in countsResponse as List) {
+            final etabId = product['etablissement_id']?.toString() ?? '';
+            if (etabId.isNotEmpty) {
+              productCounts[etabId] = (productCounts[etabId] ?? 0) + 1;
+            }
           }
+
+          // Assigner les comptages
+          for (int i = 0; i < etablissements.length; i++) {
+            final etablissement = etablissements[i];
+            if (etablissement.id != null && etablissement.id!.isNotEmpty) {
+              final count = productCounts[etablissement.id!] ?? 0;
+              etablissements[i] = etablissement.copyWith(nbProduits: count.toDouble());
+            }
+          }
+        } catch (e) {
+          print('Erreur comptage produits batch: $e');
+          // En cas d'erreur, laisser nbProduits à 0 pour tous
         }
       }
 
