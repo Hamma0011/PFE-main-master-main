@@ -10,27 +10,6 @@ class TTexts {
   static const String continueEn = "Continue";
   static const String continueFr = "Continuer";
 
-  // -- OnBoarding Texts
-  static const String onBoardingTitle1En = "Choose your product";
-  static const String onBoardingTitle1 = "Choisir votre produit ";
-  static const String onBoardingTitle2En = "Select Payment Method";
-  static const String onBoardingTitle2 = "Suivre votre commande en temps réel";
-  static const String onBoardingTitle3En = "Deliver at your door step";
-  static const String onBoardingTitle3 = "Commander sans payement internet";
-
-  static const String onBoardingSubTitle1En =
-      "Welcome to a World of Limitless Choices - Your Perfect Product Awaits!";
-  static const String onBoardingSubTitle2En =
-      "For Seamless Transactions, Choose Your Payment Path - Your Convenience, Our Priority!";
-  static const String onBoardingSubTitle3En =
-      "From Our Doorstep to Yours - Swift, Secure, and Contactless Delivery!";
-
-  static const String onBoardingSubTitle1 =
-      "Bienvenue dans un monde de choix illimités - Votre produit parfait vous attend !";
-  static const String onBoardingSubTitle2 = "Votre confort, notre priorité !";
-  static const String onBoardingSubTitle3 =
-      "Délais d'attente réduits graçe à la commande anticipée";
-
   // -- Authentication Forms en Français
   static const String firstName = "Prénom";
   static const String lastName = "Nom";

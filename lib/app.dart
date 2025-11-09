@@ -5,6 +5,7 @@ import 'package:flutter_localizations/flutter_localizations.dart';
 import 'bindings/general_binding.dart';
 import 'utils/constants/colors.dart';
 import 'utils/theme/theme.dart';
+import 'features/authentication/screens/splash/splash_screen.dart';
 
 class App extends StatelessWidget {
   const App({super.key});
@@ -39,10 +40,7 @@ class App extends StatelessWidget {
         GlobalCupertinoLocalizations.delegate,
       ], // <- pour le français
 
-      home: const Scaffold(
-        backgroundColor: AppColors.primary,
-        body: Center(child: CircularProgressIndicator(color: Colors.white)),
-      ),
+      home: const SplashScreen(),
     );
   }
 }

@@ -1,5 +1,4 @@
 import 'package:caferesto/features/shop/screens/cart/widgets/cart_items.dart';
-import 'package:caferesto/features/shop/screens/checkout/widgets/billing_payment_section.dart';
 import 'package:caferesto/utils/constants/colors.dart';
 import 'package:caferesto/utils/constants/sizes.dart';
 import 'package:caferesto/utils/helpers/helper_functions.dart';
@@ -25,7 +24,12 @@ class CheckoutScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final cartController = Get.find<CartController>();
-    UserController.instance;
+    // S'assurer que UserController est initialisé
+    try {
+      Get.find<UserController>();
+    } catch (e) {
+      Get.put(UserController(), permanent: true);
+    }
     final subTotal = cartController.totalCartPrice.value;
     // Use instance getter which handles creation if needed
     final orderController = OrderController.instance;
@@ -65,11 +69,6 @@ class CheckoutScreen extends StatelessWidget {
                     /// Divider
                     const Divider(),
                     const SizedBox(height: AppSizes.spaceBtwItems),
-
-                    /// Payment Methods
-                    TBillingPaymentSection(),
-                    const SizedBox(height: AppSizes.spaceBtwItems),
-                    const Divider(),
 
                     /// Address
                     TBillingAddressSection(),

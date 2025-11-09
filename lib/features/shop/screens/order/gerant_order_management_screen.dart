@@ -266,12 +266,10 @@ class _GerantOrderManagementScreenState
                       return _buildEmptyState(context, _tabLabels[index]);
                     }
 
-                    return ListView.separated(
+                    return ListView.builder(
                       padding: const EdgeInsets.symmetric(
                           horizontal: AppSizes.defaultSpace),
                       itemCount: filteredOrders.length,
-                      separatorBuilder: (_, __) =>
-                          const SizedBox(height: AppSizes.spaceBtwItems),
                       itemBuilder: (_, index) {
                         final order = filteredOrders[index];
                         return _buildOrderCard(order, context, dark);
@@ -402,46 +400,46 @@ class _GerantOrderManagementScreenState
     );
   }
 
-  // Beautiful Order Card
+  // Beautiful Order Card - Compact
   Widget _buildOrderCard(OrderModel order, BuildContext context, bool dark) {
     return AnimatedContainer(
       duration: const Duration(milliseconds: 300),
       curve: Curves.easeInOut,
-      child: Card(
-        elevation: 2,
+        child: Card(
+        elevation: 1,
+        margin: const EdgeInsets.only(bottom: 6),
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(AppSizes.cardRadiusLg),
+          borderRadius: BorderRadius.circular(AppSizes.cardRadiusMd),
         ),
         child: Padding(
-          padding: const EdgeInsets.all(16),
+          padding: const EdgeInsets.all(10),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
             children: [
-              // Header
+              // Header avec statut et code - Compact
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
+                    child: Row(
                       children: [
                         Text(
                           order.codeRetrait != null && order.codeRetrait!.isNotEmpty
-                              ? 'Commande ${order.codeRetrait}'
-                              : 'Commande',
-                          style:
-                              Theme.of(context).textTheme.titleLarge?.copyWith(
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                          overflow: TextOverflow.ellipsis,
+                              ? '#${order.codeRetrait}'
+                              : '#${order.id.substring(0, 8)}',
+                          style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                                fontWeight: FontWeight.bold,
+                                fontSize: 13,
+                              ),
                         ),
-                        const SizedBox(height: 4),
+                        const SizedBox(width: 6),
                         Text(
                           order.formattedOrderDate,
-                          style:
-                              Theme.of(context).textTheme.bodyMedium?.copyWith(
-                                    color: Colors.grey.shade600,
-                                  ),
+                          style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                color: Colors.grey.shade600,
+                                fontSize: 10,
+                              ),
                         ),
                       ],
                     ),
@@ -450,19 +448,16 @@ class _GerantOrderManagementScreenState
                 ],
               ),
 
-              const SizedBox(height: 16),
+              const SizedBox(height: 6),
 
-              // Order Details
-              _buildOrderDetails(order, context),
+              // Order Details compactes sur une ligne
+              _buildOrderDetailsCompact(order, context),
 
-              // Time Slot
+              // Time Slot avec heure d'arrivée estimée
               if (order.pickupDay != null && order.pickupTimeRange != null)
-                _buildTimeSlot(order, context),
+                _buildTimeSlotCompact(order, context),
 
-              // Items Preview
-              _buildItemsPreview(order, context),
-
-              const SizedBox(height: 16),
+              const SizedBox(height: 6),
 
               // Action Buttons
               _buildActionButtons(order, context),
@@ -473,27 +468,28 @@ class _GerantOrderManagementScreenState
     );
   }
 
-  // Status Chip
+  // Status Chip - Compact
   Widget _buildStatusChip(OrderStatus status, BuildContext context) {
     final statusConfig = _getStatusConfig(status);
 
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
       decoration: BoxDecoration(
         color: statusConfig.color.withOpacity(0.1),
-        borderRadius: BorderRadius.circular(20),
+        borderRadius: BorderRadius.circular(12),
         border: Border.all(color: statusConfig.color.withOpacity(0.3)),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(statusConfig.icon, size: 14, color: statusConfig.color),
+          Icon(statusConfig.icon, size: 12, color: statusConfig.color),
           const SizedBox(width: 4),
           Text(
             statusConfig.text,
             style: Theme.of(context).textTheme.labelSmall?.copyWith(
                   color: statusConfig.color,
                   fontWeight: FontWeight.bold,
+                  fontSize: 11,
                 ),
           ),
         ],
@@ -501,173 +497,159 @@ class _GerantOrderManagementScreenState
     );
   }
 
-  // Order Details
-  Widget _buildOrderDetails(OrderModel order, BuildContext context) {
-    return Row(
-      children: [
-        Expanded(
-          child: _buildDetailItem(
-            icon: Iconsax.money,
-            label: 'Total',
-            value: '${order.totalAmount.toStringAsFixed(2)} DT',
-          ),
-        ),
-        Expanded(
-          child: _buildDetailItem(
-            icon: Iconsax.shopping_bag,
-            label: 'Articles',
-            value: '${order.items.length}',
-          ),
-        ),
-        Expanded(
-          child: FutureBuilder<String?>(
-            future: userController.getUserFullName(order.userId),
-            builder: (context, snapshot) {
-              String clientName;
-              if (snapshot.connectionState == ConnectionState.waiting) {
-                clientName = 'Chargement...';
-              } else if (snapshot.hasData &&
-                  snapshot.data != null &&
-                  snapshot.data!.isNotEmpty) {
-                clientName = snapshot.data!;
-              } else {
-                clientName = order.userId.isNotEmpty
-                    ? 'Client #${order.userId.substring(0, 8)}'
-                    : 'Client inconnu';
-              }
+  // Order Details - Compact sur une ligne
+  Widget _buildOrderDetailsCompact(OrderModel order, BuildContext context) {
+    return FutureBuilder<String?>(
+      future: userController.getUserFullName(order.userId),
+      builder: (context, snapshot) {
+        String clientName;
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          clientName = '...';
+        } else if (snapshot.hasData &&
+            snapshot.data != null &&
+            snapshot.data!.isNotEmpty) {
+          // Raccourcir le nom si trop long
+          final fullName = snapshot.data!;
+          clientName = fullName.length > 15 
+              ? '${fullName.substring(0, 15)}...' 
+              : fullName;
+        } else {
+          clientName = order.userId.isNotEmpty
+              ? 'Client #${order.userId.substring(0, 6)}'
+              : 'Client';
+        }
 
-              return _buildDetailItem(
-                icon: Iconsax.user,
-                label: 'Client',
-                value: clientName,
-              );
-            },
-          ),
-        ),
-      ],
+        return Row(
+          children: [
+            // Total
+            Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(Iconsax.money, size: 14, color: AppColors.primary),
+                const SizedBox(width: 4),
+                Text(
+                  '${order.totalAmount.toStringAsFixed(2)} DT',
+                  style: const TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(width: 12),
+            // Articles
+            Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(Iconsax.shopping_bag, size: 14, color: AppColors.primary),
+                const SizedBox(width: 4),
+                Text(
+                  '${order.items.length} art.',
+                  style: const TextStyle(
+                    fontSize: 12,
+                    color: Colors.grey,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(width: 12),
+            // Client
+            Expanded(
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(Iconsax.user, size: 14, color: AppColors.primary),
+                  const SizedBox(width: 4),
+                  Expanded(
+                    child: Text(
+                      clientName,
+                      style: const TextStyle(
+                        fontSize: 12,
+                        color: Colors.grey,
+                      ),
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        );
+      },
     );
   }
 
-  Widget _buildDetailItem(
-      {required IconData icon, required String label, required String value}) {
-    return Column(
-      children: [
-        Icon(icon, size: 16, color: AppColors.primary),
-        const SizedBox(height: 4),
-        Text(
-          label,
-          style: const TextStyle(fontSize: 12, color: Colors.grey),
-        ),
-        Text(
-          value,
-          style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
-        ),
-      ],
-    );
-  }
+  // Time Slot avec heure d'arrivée estimée - Compact
+  Widget _buildTimeSlotCompact(OrderModel order, BuildContext context) {
+    // Formater l'heure d'arrivée si elle existe (HH:mm:ss -> HH:mm)
+    String? formattedArrivalTime;
+    if (order.clientArrivalTime != null && order.clientArrivalTime!.isNotEmpty) {
+      formattedArrivalTime = order.clientArrivalTime!;
+      if (formattedArrivalTime.contains(':')) {
+        final timeParts = formattedArrivalTime.split(':');
+        if (timeParts.length >= 2) {
+          formattedArrivalTime = '${timeParts[0]}:${timeParts[1]}';
+        }
+      }
+    }
 
-  // Time Slot
-  Widget _buildTimeSlot(OrderModel order, BuildContext context) {
     return Container(
       width: double.infinity,
-      margin: const EdgeInsets.only(top: 12),
-      padding: const EdgeInsets.all(12),
+      margin: const EdgeInsets.only(top: 6),
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
       decoration: BoxDecoration(
         color: AppColors.primary.withOpacity(0.05),
-        borderRadius: BorderRadius.circular(AppSizes.cardRadiusMd),
+        borderRadius: BorderRadius.circular(AppSizes.cardRadiusSm),
         border: Border.all(color: AppColors.primary.withOpacity(0.1)),
       ),
       child: Row(
         children: [
-          Icon(Iconsax.clock, color: AppColors.primary, size: 18),
-          const SizedBox(width: 8),
+          // Créneau de retrait à gauche
+          Icon(Iconsax.clock, color: AppColors.primary, size: 14),
+          const SizedBox(width: 6),
           Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  "Créneau de retrait",
-                  style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                        color: AppColors.primary,
-                        fontWeight: FontWeight.w600,
-                      ),
-                ),
-                const SizedBox(height: 2),
-                Text(
-                  "${order.pickupDay!} • ${order.pickupTimeRange!}",
-                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                        fontWeight: FontWeight.w500,
-                      ),
-                ),
-              ],
+            child: Text(
+              "${order.pickupDay!} • ${order.pickupTimeRange!}",
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    fontWeight: FontWeight.w500,
+                    fontSize: 12,
+                  ),
             ),
           ),
-        ],
-      ),
-    );
-  }
-
-  // Items Preview - FIXED: Use item.title instead of item.product.nom
-  Widget _buildItemsPreview(OrderModel order, BuildContext context) {
-    return Container(
-      margin: const EdgeInsets.only(top: 12),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            'Articles commandés:',
-            style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                  fontWeight: FontWeight.w600,
-                ),
-          ),
-          const SizedBox(height: 8),
-          ...order.items.take(3).map((item) => Padding(
-                padding: const EdgeInsets.only(bottom: 4),
-                child: Row(
-                  children: [
-                    Container(
-                      width: 6,
-                      height: 6,
-                      decoration: const BoxDecoration(
-                        color: AppColors.primary,
-                        shape: BoxShape.circle,
-                      ),
+          // Heure d'arrivée estimée à droite sur la même ligne
+          if (formattedArrivalTime != null) ...[
+            const SizedBox(width: 8),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
+              decoration: BoxDecoration(
+                color: Colors.green.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(6),
+                border: Border.all(color: Colors.green.withOpacity(0.3)),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(Iconsax.timer, color: Colors.green.shade700, size: 12),
+                  const SizedBox(width: 4),
+                  Text(
+                    formattedArrivalTime,
+                    style: TextStyle(
+                      fontWeight: FontWeight.bold,
+                      color: Colors.green.shade800,
+                      fontSize: 11,
                     ),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: Text(
-                        // FIXED: Use item.title instead of item.product.nom
-                        '${item.quantity}x ${item.title}',
-                        style: Theme.of(context).textTheme.bodyMedium,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    ),
-                    Text(
-                      // FIXED: Use item.price instead of item.product.prix
-                      '${(item.price * item.quantity).toStringAsFixed(2)} DT',
-                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                            fontWeight: FontWeight.bold,
-                          ),
-                    ),
-                  ],
-                ),
-              )),
-          if (order.items.length > 3)
-            Padding(
-              padding: const EdgeInsets.only(top: 4),
-              child: Text(
-                '+ ${order.items.length - 3} autres articles...',
-                style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                      color: Colors.grey.shade600,
-                    ),
+                  ),
+                ],
               ),
             ),
+          ],
         ],
       ),
     );
   }
 
-  // Action Buttons
+
+  // Action Buttons - Compact
   Widget _buildActionButtons(OrderModel order, BuildContext context) {
     return Obx(() {
       final isUpdating = orderController.isUpdating.value;
@@ -677,40 +659,57 @@ class _GerantOrderManagementScreenState
           return Row(
             children: [
               Expanded(
-                child: OutlinedButton.icon(
-                  icon: isUpdating
+                child: OutlinedButton(
+                  style: OutlinedButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(vertical: 8),
+                    minimumSize: const Size(0, 36),
+                  ),
+                  onPressed: isUpdating ? null : () => _acceptOrder(order),
+                  child: isUpdating
                       ? const SizedBox(
                           height: 16,
                           width: 16,
                           child: CircularProgressIndicator(strokeWidth: 2),
                         )
-                      : const Icon(Iconsax.tick_circle, size: 18),
-                  label: isUpdating
-                      ? const Text("Traitement...")
-                      : const Text("Accepter"),
-                  onPressed: isUpdating ? null : () => _acceptOrder(order),
+                      : Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            const Icon(Iconsax.tick_circle, size: 16),
+                            const SizedBox(width: 4),
+                            const Text("Accepter", style: TextStyle(fontSize: 12)),
+                          ],
+                        ),
                 ),
               ),
-              const SizedBox(width: 8),
+              const SizedBox(width: 6),
               Expanded(
-                child: ElevatedButton.icon(
-                  icon: isUpdating
-                      ? const SizedBox(
-                          height: 16,
-                          width: 16,
-                          child: CircularProgressIndicator(strokeWidth: 2),
-                        )
-                      : const Icon(Iconsax.close_circle, size: 18),
-                  label: isUpdating
-                      ? const Text("Traitement...")
-                      : const Text("Refuser"),
+                child: ElevatedButton(
                   style: ElevatedButton.styleFrom(
                     backgroundColor: Colors.red,
                     foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(vertical: 8),
+                    minimumSize: const Size(0, 36),
                   ),
                   onPressed: isUpdating
                       ? null
                       : () => _showRefusalDialog(order, context),
+                  child: isUpdating
+                      ? const SizedBox(
+                          height: 16,
+                          width: 16,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                          ),
+                        )
+                      : Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            const Icon(Iconsax.close_circle, size: 16),
+                            const SizedBox(width: 4),
+                            const Text("Refuser", style: TextStyle(fontSize: 12)),
+                          ],
+                        ),
                 ),
               ),
             ],
@@ -719,36 +718,52 @@ class _GerantOrderManagementScreenState
         case OrderStatus.preparing:
           return SizedBox(
             width: double.infinity,
-            child: ElevatedButton.icon(
-              icon: isUpdating
+            child: ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                padding: const EdgeInsets.symmetric(vertical: 8),
+                minimumSize: const Size(0, 36),
+              ),
+              onPressed: isUpdating ? null : () => _markAsReady(order),
+              child: isUpdating
                   ? const SizedBox(
                       height: 16,
                       width: 16,
                       child: CircularProgressIndicator(strokeWidth: 2),
                     )
-                  : const Icon(Iconsax.box_tick, size: 18),
-              label: isUpdating
-                  ? const Text("Mise à jour...")
-                  : const Text("Marquer comme Prête"),
-              onPressed: isUpdating ? null : () => _markAsReady(order),
+                  : Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        const Icon(Iconsax.box_tick, size: 16),
+                        const SizedBox(width: 4),
+                        const Text("Marquer Prête", style: TextStyle(fontSize: 12)),
+                      ],
+                    ),
             ),
           );
 
         case OrderStatus.ready:
           return SizedBox(
             width: double.infinity,
-            child: ElevatedButton.icon(
-              icon: isUpdating
+            child: ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                padding: const EdgeInsets.symmetric(vertical: 8),
+                minimumSize: const Size(0, 36),
+              ),
+              onPressed: isUpdating ? null : () => _markAsDelivered(order),
+              child: isUpdating
                   ? const SizedBox(
                       height: 16,
                       width: 16,
                       child: CircularProgressIndicator(strokeWidth: 2),
                     )
-                  : const Icon(Iconsax.truck_tick, size: 18),
-              label: isUpdating
-                  ? const Text("Mise à jour...")
-                  : const Text("Marquer comme Livrée"),
-              onPressed: isUpdating ? null : () => _markAsDelivered(order),
+                  : Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        const Icon(Iconsax.truck_tick, size: 16),
+                        const SizedBox(width: 4),
+                        const Text("Marquer Livrée", style: TextStyle(fontSize: 12)),
+                      ],
+                    ),
             ),
           );
 

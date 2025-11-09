@@ -34,7 +34,15 @@ class OrderController extends GetxController {
   final orderRepository = Get.put(OrderRepository());
   final produitRepository = ProduitRepository.instance;
   final cartController = CartController.instance;
-  final userController = UserController.instance;
+  // UserController sera obtenu de manière sécurisée
+  UserController get userController {
+    try {
+      return Get.find<UserController>();
+    } catch (e) {
+      // Si UserController n'est pas trouvé, le créer
+      return Get.put(UserController(), permanent: true);
+    }
+  }
   final _db = Supabase.instance.client;
   final addressController = AddressController.instance;
   final checkoutController = CheckoutController.instance;
@@ -52,7 +60,8 @@ class OrderController extends GetxController {
   void onInit() {
     super.onInit();
     _sAbonnerCommandesTempsReel();
-    ecouterCommandesUtilisateur(); // 👈 Démarrer l'écoute en temps réel
+    // Attendre un peu pour s'assurer que UserController est complètement initialisé
+    Future.microtask(() => ecouterCommandesUtilisateur());
   }
 
   @override
@@ -63,21 +72,60 @@ class OrderController extends GetxController {
 
   /// Écoute les changements dans la table `orders` pour l'utilisateur connecté
   void ecouterCommandesUtilisateur() {
-    final userId = userController.user.value.id;
+    try {
+      // S'assurer que UserController est bien initialisé
+      final userId = userController.user.value.id;
+      if (userId.isEmpty) {
+        // Si l'utilisateur n'est pas encore chargé, réessayer après un délai
+        Future.delayed(const Duration(milliseconds: 500), () {
+          final retryUserId = userController.user.value.id;
+          if (retryUserId.isNotEmpty) {
+            _startListeningToOrders(retryUserId);
+          }
+        });
+        return;
+      }
+      _startListeningToOrders(userId);
+    } catch (e) {
+      debugPrint('Erreur lors de l\'écoute des commandes: $e');
+      // Réessayer après un délai si UserController n'est pas encore disponible
+      Future.delayed(const Duration(milliseconds: 1000), () {
+        try {
+          final userId = userController.user.value.id;
+          if (userId.isNotEmpty) {
+            _startListeningToOrders(userId);
+          }
+        } catch (e2) {
+          debugPrint('Erreur lors de la réécoute des commandes: $e2');
+        }
+      });
+    }
+  }
+
+  /// Démarre l'écoute des commandes pour un utilisateur donné
+  void _startListeningToOrders(String userId) {
     if (userId.isEmpty) return;
 
-    isLoading.value = true;
+    try {
+      isLoading.value = true;
 
-    /// Écouter les changements dans la table `orders`
-    _db
-        .from('orders')
-        .stream(primaryKey: ['id'])
-        .eq('user_id', userId)
-        .order('created_at', ascending: false)
-        .listen((data) {
-          orders.value = data.map((row) => OrderModel.fromJson(row)).toList();
-          isLoading.value = false;
-        });
+      /// Écouter les changements dans la table `orders`
+      _db
+          .from('orders')
+          .stream(primaryKey: ['id'])
+          .eq('user_id', userId)
+          .order('created_at', ascending: false)
+          .listen((data) {
+            orders.value = data.map((row) => OrderModel.fromJson(row)).toList();
+            isLoading.value = false;
+          }, onError: (error) {
+            debugPrint('Erreur lors de l\'écoute des commandes: $error');
+            isLoading.value = false;
+          });
+    } catch (e) {
+      debugPrint('Erreur lors du démarrage de l\'écoute des commandes: $e');
+      isLoading.value = false;
+    }
   }
 
   /// Récupère les commandes d'un gérant pour un établissement donné
@@ -242,11 +290,15 @@ class OrderController extends GetxController {
               orders.refresh();
             } else {
               // Vérifier si cette nouvelle commande appartient au gérant actuel
-              final currentEtabId = userController.currentEtablissementId;
-              if (currentEtabId != null &&
-                  updatedOrder.etablissementId == currentEtabId) {
-                orders.insert(0, updatedOrder);
-                orders.refresh();
+              try {
+                final currentEtabId = userController.currentEtablissementId;
+                if (currentEtabId != null &&
+                    updatedOrder.etablissementId == currentEtabId) {
+                  orders.insert(0, updatedOrder);
+                  orders.refresh();
+                }
+              } catch (e) {
+                debugPrint('Erreur lors de la vérification de l\'établissement: $e');
               }
             }
           } catch (e) {
@@ -622,7 +674,7 @@ class OrderController extends GetxController {
           status: OrderStatus.pending,
           totalAmount: totalAmount,
           orderDate: DateTime.now(),
-          paymentMethod: checkoutController.selectedPaymentMethod.value.name,
+          paymentMethod: checkoutController.paymentMethod,
           address: selectedAddress,
           deliveryDate: null, // Devrait être null initialement
           items: cartController.cartItems.toList(),

@@ -2,7 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
+import '../../../data/repositories/authentication/authentication_repository.dart';
 import '../../../data/repositories/user/user_repository.dart';
+import '../../../features/authentication/screens/login/login.dart';
 import '../../../utils/popups/loaders.dart';
 import '../models/user_model.dart';
 import 'package:image_picker/image_picker.dart';
@@ -27,6 +29,7 @@ class UserController extends GetxController {
   Rx<UserModel> user = UserModel.empty().obs;
 
   final userRepository = Get.find<UserRepository>();
+  RealtimeChannel? _userBanChannel;
 
   final hidePassword = false.obs;
   final verifyEmail = TextEditingController();
@@ -41,6 +44,8 @@ class UserController extends GetxController {
     if (currentSession != null) {
       // Charger les données de manière synchrone au démarrage
       _loadUserDataSync();
+      // Démarrer l'écoute Realtime pour les bannissements
+      _subscribeToUserBanRealtime();
     }
 
     // Listener sur l'état de connexion Supabase pour les changements futurs
@@ -48,11 +53,21 @@ class UserController extends GetxController {
       final session = data.session;
       if (session != null) {
         fetchUserRecord();
+        // Démarrer l'écoute Realtime quand l'utilisateur se connecte
+        _subscribeToUserBanRealtime();
       } else {
         user(UserModel.empty());
+        // Arrêter l'écoute Realtime quand l'utilisateur se déconnecte
+        _unsubscribeFromUserBanRealtime();
         debugPrint("Utilisateur déconnecté");
       }
     });
+  }
+
+  @override
+  void onClose() {
+    _unsubscribeFromUserBanRealtime();
+    super.onClose();
   }
 
   /// Charger les données utilisateur de manière synchrone au démarrage
@@ -69,6 +84,13 @@ class UserController extends GetxController {
       final userData = await userRepository.fetchUserDetails();
 
       if (userData != null) {
+        // Vérifier si l'utilisateur est banni avant de mettre à jour
+        if (userData.isBanned) {
+          debugPrint(" Utilisateur banni détecté - Déconnexion immédiate");
+          await _handleUserBan();
+          return;
+        }
+
         // Mettre à jour avec les données de la base de données
         user(userData);
         debugPrint(
@@ -89,6 +111,111 @@ class UserController extends GetxController {
       }
     } finally {
       profileLoading.value = false;
+    }
+  }
+
+  /// S'abonner aux changements Realtime sur la table users pour détecter les bannissements
+  void _subscribeToUserBanRealtime() {
+    final currentUserId = Supabase.instance.client.auth.currentUser?.id;
+    if (currentUserId == null || currentUserId.isEmpty) {
+      debugPrint("Aucun utilisateur connecté - Pas d'écoute Realtime");
+      return;
+    }
+
+    try {
+      // Se désabonner de l'ancien canal s'il existe
+      _unsubscribeFromUserBanRealtime();
+
+      // Créer un nouveau canal pour écouter les changements sur l'utilisateur actuel
+      _userBanChannel = Supabase.instance.client
+          .channel('user_ban_${currentUserId}')
+          .onPostgresChanges(
+            event: PostgresChangeEvent.update,
+            schema: 'public',
+            table: 'users',
+            filter: PostgresChangeFilter(
+              type: PostgresChangeFilterType.eq,
+              column: 'id',
+              value: currentUserId,
+            ),
+            callback: (payload) async {
+              debugPrint(
+                  "🔄 Changement détecté sur l'utilisateur via Realtime");
+              final updatedData = payload.newRecord;
+
+              // Vérifier si l'utilisateur a été banni
+              final isBanned = updatedData['is_banned'] as bool? ?? false;
+
+              if (isBanned) {
+                debugPrint(
+                    " Bannissement détecté via Realtime - Déconnexion immédiate");
+                await _handleUserBan();
+              } else {
+                // Mettre à jour les données utilisateur si d'autres champs ont changé
+                try {
+                  final userData =
+                      await userRepository.fetchUserDetails(currentUserId);
+                  if (userData != null && !userData.isBanned) {
+                    user(userData);
+                  }
+                } catch (e) {
+                  debugPrint(
+                      "Erreur lors de la mise à jour des données utilisateur: $e");
+                }
+              }
+            },
+          )
+          .subscribe((status, [error]) {
+        if (status == RealtimeSubscribeStatus.subscribed) {
+          debugPrint("Abonné aux changements Realtime pour l'utilisateur");
+        } else if (status == RealtimeSubscribeStatus.channelError) {
+          debugPrint(" Erreur d'abonnement Realtime: $error");
+        }
+      });
+    } catch (e) {
+      debugPrint("Erreur lors de l'abonnement Realtime: $e");
+    }
+  }
+
+  /// Se désabonner de l'écoute Realtime
+  void _unsubscribeFromUserBanRealtime() {
+    if (_userBanChannel != null) {
+      try {
+        Supabase.instance.client.removeChannel(_userBanChannel!);
+        _userBanChannel = null;
+        debugPrint("✅ Désabonné de l'écoute Realtime");
+      } catch (e) {
+        debugPrint("Erreur lors de la désinscription Realtime: $e");
+      }
+    }
+  }
+
+  /// Gérer la déconnexion d'un utilisateur banni
+  Future<void> _handleUserBan() async {
+    try {
+      // Arrêter l'écoute Realtime
+      _unsubscribeFromUserBanRealtime();
+
+      // Afficher un message à l'utilisateur
+      TLoaders.errorSnackBar(
+        title: 'Accès refusé',
+        message: "Votre compte a été banni. Vous allez être déconnecté.",
+      );
+
+      // Attendre un peu pour que l'utilisateur voie le message
+      await Future.delayed(const Duration(milliseconds: 1500));
+
+      // Déconnecter l'utilisateur
+      await AuthenticationRepository.instance.logout();
+    } catch (e) {
+      debugPrint("Erreur lors de la gestion du bannissement: $e");
+      // Forcer la déconnexion même en cas d'erreur
+      try {
+        await Supabase.instance.client.auth.signOut();
+        Get.offAll(() => const LoginScreen());
+      } catch (e2) {
+        debugPrint("Erreur critique lors de la déconnexion: $e2");
+      }
     }
   }
 

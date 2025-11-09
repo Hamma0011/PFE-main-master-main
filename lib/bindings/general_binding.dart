@@ -22,25 +22,29 @@ import '../utils/helpers/network_manager.dart';
 class GeneralBinding extends Bindings {
   @override
   void dependencies() {
+    // Repositories d'abord
     Get.lazyPut<ProduitRepository>(() => ProduitRepository(), fenix: true);
     Get.lazyPut<UserRepository>(() => UserRepository(), fenix: true);
     Get.lazyPut<EtablissementRepository>(() => EtablissementRepository(), fenix: true);
-
-    Get.lazyPut(() => SignupController());
-    Get.lazyPut(() => OTPVerificationController());
-    Get.lazyPut(() => OrderController());
-
-    Get.lazyPut<AddressController>(() => AddressController(), fenix: true);
     Get.lazyPut<OrderRepository>(() => OrderRepository(), fenix: true);
     Get.lazyPut<AddressRepository>(() => AddressRepository(), fenix: true);
+
+    // UserController doit être créé avant OrderController car OrderController en dépend
+    Get.lazyPut<UserController>(() => UserController(), fenix: true);
+    Get.lazyPut<NetworkManager>(() => NetworkManager(), fenix: true);
+
+    // Controllers d'authentification
+    Get.lazyPut(() => SignupController());
+    Get.lazyPut(() => OTPVerificationController());
+
+    // Controllers qui dépendent de UserController
+    Get.lazyPut<AddressController>(() => AddressController(), fenix: true);
+    Get.lazyPut<CartController>(() => CartController(), fenix: true);
+    Get.lazyPut<CheckoutController>(() => CheckoutController(), fenix: true);
+    Get.lazyPut(() => OrderController());
     Get.lazyPut<FavoritesController>(() => FavoritesController(), fenix: true);
     Get.lazyPut<ShareController>(() => ShareController(), fenix: true);
     Get.lazyPut<VariationController>(() => VariationController(), fenix: true);
-    Get.lazyPut<CartController>(() => CartController(), fenix: true);
-    Get.lazyPut<CheckoutController>(() => CheckoutController(), fenix: true);
-
-    Get.lazyPut<NetworkManager>(() => NetworkManager(), fenix: true);
-    Get.lazyPut<UserController>(() => UserController(), fenix: true);
     Get.lazyPut<UserManagementController>(() => UserManagementController(), fenix: true);
     Get.lazyPut<EtablissementController>(
         () => EtablissementController(Get.find<EtablissementRepository>()),

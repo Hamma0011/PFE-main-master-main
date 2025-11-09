@@ -388,10 +388,11 @@ class AdminUserManagementScreen extends StatelessWidget {
             if (!isBanned) ...[
               const SizedBox(height: 8),
               Text(
-                '⚠️ L\'utilisateur sera déconnecté et ne pourra plus se connecter.',
+                '⚠️ L\'utilisateur sera déconnecté immédiatement et ne pourra plus se connecter.',
                 style: TextStyle(
                   color: Colors.orange,
                   fontSize: 12,
+                  fontWeight: FontWeight.w500,
                 ),
               ),
             ],

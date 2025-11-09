@@ -1,13 +1,11 @@
 import 'package:caferesto/features/authentication/screens/signup.widgets/otp_verification_screen.dart';
 import 'package:caferesto/utils/local_storage/storage_utility.dart';
-import 'package:flutter_native_splash/flutter_native_splash.dart';
 import 'package:get/get.dart';
 import 'package:get_storage/get_storage.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../../features/authentication/controllers/signup/signup_controller.dart';
 import '../../../features/authentication/screens/login/login.dart';
-import '../../../features/authentication/screens/onboarding/onboarding.dart';
 import '../../../features/personalization/controllers/user_controller.dart';
 import '../../../features/personalization/models/user_model.dart';
 import '../../../navigation_menu.dart';
@@ -31,7 +29,7 @@ class AuthenticationRepository extends GetxController {
 
   @override
   void onReady() {
-    FlutterNativeSplash.remove();
+    // On utilise notre splash screen Flutter au lieu du splash screen natif
 
     _auth.onAuthStateChange.listen((data) async {
       final event = data.event;
@@ -107,11 +105,8 @@ class AuthenticationRepository extends GetxController {
             ));
       }
     } else {
-      deviceStorage.writeIfNull('IsFirstTime', true);
-      final isFirst = deviceStorage.read('IsFirstTime') == true;
-      isFirst
-          ? Get.offAll(() => const OnBoardingScreen())
-          : Get.offAll(() => const LoginScreen());
+      // Le splash screen est déjà affiché comme home, il redirigera automatiquement vers login après 3 secondes
+      // Pas besoin de redirection ici
     }
   }
 
