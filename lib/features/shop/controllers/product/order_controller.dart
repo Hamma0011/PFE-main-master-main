@@ -43,6 +43,7 @@ class OrderController extends GetxController {
       return Get.put(UserController(), permanent: true);
     }
   }
+
   final _db = Supabase.instance.client;
   final addressController = AddressController.instance;
   final checkoutController = CheckoutController.instance;
@@ -222,9 +223,10 @@ class OrderController extends GetxController {
       String message = "";
 
       // Utiliser le code de retrait si disponible, sinon utiliser l'ID tronqué
-      final orderCode = order.codeRetrait != null && order.codeRetrait!.isNotEmpty
-          ? order.codeRetrait!
-          : order.id.substring(0, 8).toUpperCase();
+      final orderCode =
+          order.codeRetrait != null && order.codeRetrait!.isNotEmpty
+              ? order.codeRetrait!
+              : order.id.substring(0, 8).toUpperCase();
 
       switch (newStatus) {
         case OrderStatus.preparing:
@@ -234,8 +236,7 @@ class OrderController extends GetxController {
           break;
         case OrderStatus.ready:
           title = "Commande prête";
-          message =
-              "Votre commande (Code: $orderCode) est prête pour retrait.";
+          message = "Votre commande (Code: $orderCode) est prête pour retrait.";
           break;
         case OrderStatus.delivered:
           title = "Commande livrée";
@@ -298,7 +299,8 @@ class OrderController extends GetxController {
                   orders.refresh();
                 }
               } catch (e) {
-                debugPrint('Erreur lors de la vérification de l\'établissement: $e');
+                debugPrint(
+                    'Erreur lors de la vérification de l\'établissement: $e');
               }
             }
           } catch (e) {
@@ -663,7 +665,8 @@ class OrderController extends GetxController {
         }
 
         // Générer le code de retrait avant de créer la commande
-        final codeRetrait = await orderRepository.generateCodeRetrait(etablissementId);
+        final codeRetrait =
+            await orderRepository.generateCodeRetrait(etablissementId);
         debugPrint('🏷️ Code de retrait généré: $codeRetrait');
 
         // Créer une nouvelle commande
@@ -860,10 +863,11 @@ class OrderController extends GetxController {
         final gerantId = etablissementResponse['id_owner']?.toString() ?? '';
         if (gerantId.isNotEmpty) {
           // Utiliser le code de retrait si disponible
-          final orderCode = order.codeRetrait != null && order.codeRetrait!.isNotEmpty
-              ? order.codeRetrait!
-              : orderId.substring(0, 8).toUpperCase();
-          
+          final orderCode =
+              order.codeRetrait != null && order.codeRetrait!.isNotEmpty
+                  ? order.codeRetrait!
+                  : orderId.substring(0, 8).toUpperCase();
+
           // Notifier le gérant
           await _db.from('notifications').insert({
             'user_id': gerantId,
@@ -931,10 +935,11 @@ class OrderController extends GetxController {
       });
 
       // Utiliser le code de retrait si disponible
-      final orderCode = order.codeRetrait != null && order.codeRetrait!.isNotEmpty
-          ? order.codeRetrait!
-          : orderId.substring(0, 8).toUpperCase();
-      
+      final orderCode =
+          order.codeRetrait != null && order.codeRetrait!.isNotEmpty
+              ? order.codeRetrait!
+              : orderId.substring(0, 8).toUpperCase();
+
       // Envoyer une notification à l'établissement
       await _envoyerNotification(
         userId: order.etablissementId, // Cela va à l'établissement
@@ -1083,10 +1088,11 @@ class OrderController extends GetxController {
       });
 
       // Utiliser le code de retrait si disponible
-      final orderCode = order.codeRetrait != null && order.codeRetrait!.isNotEmpty
-          ? order.codeRetrait!
-          : orderId.substring(0, 8).toUpperCase();
-      
+      final orderCode =
+          order.codeRetrait != null && order.codeRetrait!.isNotEmpty
+              ? order.codeRetrait!
+              : orderId.substring(0, 8).toUpperCase();
+
       // Envoyer une notification à l'établissement
       await _envoyerNotification(
         userId: order.etablissementId,
@@ -1169,7 +1175,7 @@ class OrderController extends GetxController {
       String etablissementId, OrderModel order) async {
     try {
       debugPrint(
-          '🔔 Début de la notification au gérant pour l\'établissement: $etablissementId');
+          ' Début de la notification au gérant pour l\'établissement: $etablissementId');
 
       // Récupérer directement l'ID du gérant depuis la base de données
       final etablissementResponse = await _db
@@ -1179,7 +1185,7 @@ class OrderController extends GetxController {
           .maybeSingle();
 
       if (etablissementResponse == null) {
-        debugPrint('⚠️ Établissement non trouvé: $etablissementId');
+        debugPrint(' Établissement non trouvé: $etablissementId');
         return;
       }
 
@@ -1189,7 +1195,7 @@ class OrderController extends GetxController {
 
       if (gerantId.isEmpty) {
         debugPrint(
-            '⚠️ Aucun gérant trouvé pour l\'établissement: $etablissementId');
+            ' Aucun gérant trouvé pour l\'établissement: $etablissementId');
         return;
       }
 
@@ -1208,7 +1214,7 @@ class OrderController extends GetxController {
         final arrivalTime = order.clientArrivalTime!;
         final timeParts = arrivalTime.split(':');
         final formattedTime = '${timeParts[0]}:${timeParts[1]}'; // HH:mm
-        message += '\n⏰ Heure d\'arrivée estimée du client : $formattedTime';
+        message += '\n Heure d\'arrivée estimée du client : $formattedTime';
       }
 
       // Envoyer la notification au gérant
@@ -1221,9 +1227,9 @@ class OrderController extends GetxController {
         'created_at': DateTime.now().toIso8601String(),
       });
 
-      debugPrint('✅ Notification envoyée au gérant $gerantId pour la commande');
+      debugPrint(' Notification envoyée au gérant $gerantId pour la commande');
     } catch (e, stackTrace) {
-      debugPrint('❌ Erreur lors de la notification au gérant: $e');
+      debugPrint(' Erreur lors de la notification au gérant: $e');
       debugPrint('Stack trace: $stackTrace');
       // Ne pas lancer l'erreur pour ne pas bloquer le processus de commande
     }

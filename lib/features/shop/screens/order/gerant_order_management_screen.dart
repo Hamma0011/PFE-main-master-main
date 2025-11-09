@@ -453,6 +453,9 @@ class _GerantOrderManagementScreenState
               // Order Details compactes sur une ligne
               _buildOrderDetailsCompact(order, context),
 
+              // Articles commandés - Compact
+              _buildItemsPreviewCompact(order, context),
+
               // Time Slot avec heure d'arrivée estimée
               if (order.pickupDay != null && order.pickupTimeRange != null)
                 _buildTimeSlotCompact(order, context),
@@ -576,6 +579,113 @@ class _GerantOrderManagementScreenState
           ],
         );
       },
+    );
+  }
+
+  // Items Preview - Compact
+  Widget _buildItemsPreviewCompact(OrderModel order, BuildContext context) {
+    if (order.items.isEmpty) {
+      return const SizedBox.shrink();
+    }
+
+    // Afficher les 2 premiers articles + compteur si plus
+    final displayItems = order.items.take(2).toList();
+    final remainingCount = order.items.length > 2 ? order.items.length - 2 : 0;
+
+    return Container(
+      margin: const EdgeInsets.only(top: 6),
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+      decoration: BoxDecoration(
+        color: Colors.grey.shade50,
+        borderRadius: BorderRadius.circular(6),
+        border: Border.all(color: Colors.grey.shade200),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Row(
+            children: [
+              Icon(Iconsax.shopping_bag, size: 12, color: Colors.grey.shade700),
+              const SizedBox(width: 4),
+              Text(
+                'Articles:',
+                style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                      fontWeight: FontWeight.w600,
+                      fontSize: 10,
+                      color: Colors.grey.shade700,
+                    ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 4),
+          ...displayItems.map((item) {
+            // Extraire la taille de la variation si elle existe
+            String? taille;
+            if (item.selectedVariation != null) {
+              taille = item.selectedVariation!['taille'] ?? 
+                       item.selectedVariation!['size'] ?? 
+                       (item.variationId.isNotEmpty ? item.variationId : null);
+            } else if (item.variationId.isNotEmpty) {
+              taille = item.variationId;
+            }
+
+            // Construire le texte avec ou sans taille
+            String itemText = '${item.quantity}x ${item.title}';
+            if (taille != null && taille.isNotEmpty) {
+              itemText += ' ($taille)';
+            }
+
+            return Padding(
+              padding: const EdgeInsets.only(bottom: 2),
+              child: Row(
+                children: [
+                  Container(
+                    width: 4,
+                    height: 4,
+                    decoration: BoxDecoration(
+                      color: AppColors.primary,
+                      shape: BoxShape.circle,
+                    ),
+                  ),
+                  const SizedBox(width: 6),
+                  Expanded(
+                    child: Text(
+                      itemText,
+                      style: TextStyle(
+                        fontSize: 11,
+                        color: Colors.grey.shade800,
+                      ),
+                      overflow: TextOverflow.ellipsis,
+                      maxLines: 1,
+                    ),
+                  ),
+                  Text(
+                    '${(item.price * item.quantity).toStringAsFixed(2)} DT',
+                    style: TextStyle(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w600,
+                      color: Colors.grey.shade800,
+                    ),
+                  ),
+                ],
+              ),
+            );
+          }),
+          if (remainingCount > 0)
+            Padding(
+              padding: const EdgeInsets.only(top: 2),
+              child: Text(
+                '+ $remainingCount autre${remainingCount > 1 ? 's' : ''} article${remainingCount > 1 ? 's' : ''}',
+                style: TextStyle(
+                  fontSize: 10,
+                  color: Colors.grey.shade600,
+                  fontStyle: FontStyle.italic,
+                ),
+              ),
+            ),
+        ],
+      ),
     );
   }
 
