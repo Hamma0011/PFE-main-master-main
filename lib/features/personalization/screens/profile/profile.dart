@@ -214,18 +214,17 @@ class ProfileScreen extends GetView<UserController> {
                 const SizedBox(height: AppSizes.spaceBtwItems),
 
                 TProfileMenu(
-                    title: "Nom",
-                    value: "${user.firstName} ${user.lastName}",
-                    onPressed: () => Get.to(() => const ChangeName())),
+                  title: "Nom",
+                  value: "${user.firstName} ${user.lastName}",
+                ),
                 TProfileMenu(
                   title: "Nom d'utilisateur",
                   value: user.username,
-                  onPressed: () {},
                 ),
 
                 const SizedBox(height: AppSizes.spaceBtwItems),
                 const Divider(),
-                //const SizedBox(height: AppSizes.spaceBtwItems),
+                const SizedBox(height: AppSizes.spaceBtwItems),
 
                 const TSectionHeading(
                   title: 'Infos personnelles',
@@ -235,19 +234,27 @@ class ProfileScreen extends GetView<UserController> {
                 TProfileMenu(
                   title: "E-mail",
                   value: user.email,
-                  onPressed: () {},
                 ),
                 TProfileMenu(
                   title: "Téléphone",
                   value: user.phone,
-                  onPressed: () {},
                 ),
                 TProfileMenu(
                   title: "Date de naissance ",
                   value: user.dateOfBirth != null
                       ? DateFormat('dd/MM/yyyy').format(user.dateOfBirth!)
                       : "Non définie",
-                  onPressed: () {},
+                ),
+                
+                const SizedBox(height: AppSizes.spaceBtwSections),
+                
+                /// Bouton Modifier mes informations
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton(
+                    onPressed: () => Get.to(() => const ChangeName()),
+                    child: const Text('Modifier mes informations'),
+                  ),
                 ),
               ],
             ),

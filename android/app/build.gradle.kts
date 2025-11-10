@@ -6,7 +6,7 @@ plugins {
 }
 
 android {
-    namespace = "com.example.cmandi_supabase"
+    namespace = "com.example.PreOrder"
     compileSdk = flutter.compileSdkVersion
     ndkVersion = "27.0.12077973" // Fix NDK version
 
@@ -20,7 +20,7 @@ android {
     }
 
     defaultConfig {
-        applicationId = "com.example.cmandi_supabase"
+        applicationId = "com.example.PreOrder"
 
         // Override ici
         minSdk = flutter.minSdkVersion // minimum requis par plusieurs plugins

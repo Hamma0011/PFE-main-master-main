@@ -1,4 +1,3 @@
-import 'package:caferesto/utils/device/device_utility.dart';
 import 'package:flutter/material.dart';
 import 'package:lottie/lottie.dart';
 
@@ -29,23 +28,31 @@ class TAnimationLoaderWidget extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final screenWidth = MediaQuery.of(context).size.width;
+    // Cache MediaQuery to avoid multiple calls
+    final mediaQuery = MediaQuery.of(context);
+    final screenWidth = mediaQuery.size.width;
     final baseTextStyle = textStyle ?? _getResponsiveTextStyle(screenWidth);
+    final animationSize = _getAnimationSize(screenWidth);
 
     return Center(
-      child: Container(
+      child: ConstrainedBox(
         constraints: BoxConstraints(
-          maxWidth: MediaQuery.of(context).size.width * 0.85,
+          maxWidth: screenWidth * 0.85,
+          maxHeight: double.infinity,
         ),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           mainAxisSize: MainAxisSize.min,
           children: [
             // Animation responsive
-            Lottie.asset(
-              animation,
-              width: _getAnimationSize(context),
-              fit: BoxFit.contain,
+            SizedBox(
+              width: animationSize,
+              height: animationSize,
+              child: Lottie.asset(
+                animation,
+                fit: BoxFit.contain,
+                repeat: true,
+              ),
             ),
             const SizedBox(height: AppSizes.spaceBtwSections),
 
@@ -57,15 +64,15 @@ class TAnimationLoaderWidget extends StatelessWidget {
                 text,
                 style: baseTextStyle,
                 textAlign: TextAlign.center,
+                maxLines: 3,
+                overflow: TextOverflow.ellipsis,
               ),
             ),
 
-            const SizedBox(height: AppSizes.defaultSpace),
-
-            // --- Bouton reverted to original implementation ---
-            if (showAction && actionText != null)
+            if (showAction && actionText != null) ...[
+              const SizedBox(height: AppSizes.defaultSpace),
               SizedBox(
-                width: 250, // <-- original fixed width
+                width: 250,
                 child: OutlinedButton(
                   onPressed: onActionPressed,
                   style: OutlinedButton.styleFrom(
@@ -85,24 +92,26 @@ class TAnimationLoaderWidget extends StatelessWidget {
                   ),
                 ),
               ),
+            ],
           ],
         ),
       ),
     );
   }
 
-  // Responsive animation size
-  double _getAnimationSize(BuildContext context) {
-    final screenWidth = TDeviceUtils.getScreenWidth(context);
-
+  // Responsive animation size - use screenWidth directly to avoid context issues
+  double _getAnimationSize(double screenWidth) {
     if (screenWidth > 1600) {
       return 420.0;
     } else if (screenWidth > 900) {
       return 340.0;
     } else if (screenWidth > 600) {
       return 280.0;
+    } else if (screenWidth > 400) {
+      return screenWidth * 0.6;
     } else {
-      return screenWidth * 0.7;
+      // For very small screens, limit the size
+      return screenWidth * 0.7 > 200 ? 200 : screenWidth * 0.7;
     }
   }
 

@@ -132,17 +132,6 @@ class SettingsScreen extends StatelessWidget {
                   //     icon: Iconsax.security_card,
                   //     onTap: () {}),
 
-                  /// Paramètres de l'app
-                  SizedBox(height: AppSizes.spaceBtwSections),
-                  TSectionHeading(title: "Paramètres", showActionButton: false),
-                  SizedBox(height: AppSizes.spaceBtwItems),
-                  TSettingsMenuTile(
-                      icon: Iconsax.location,
-                      title: "Géolocalisation",
-                      subTitle:
-                          "Définir une recommandation à partir de ma position",
-                      trailing: Switch(value: true, onChanged: (value) {})),
-
                   /// Développeur , upload
                   if (isAdminGerant()) ...[
                     SizedBox(height: AppSizes.spaceBtwSections),

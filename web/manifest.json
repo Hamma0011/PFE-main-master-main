@@ -1,6 +1,6 @@
 {
-    "name": "cmandi_supabase",
-    "short_name": "cmandi_supabase",
+    "name": "PreOrder",
+    "short_name": "PreOrder",
     "start_url": ".",
     "display": "standalone",
     "background_color": "#0175C2",

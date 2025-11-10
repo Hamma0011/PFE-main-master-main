@@ -13,6 +13,7 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
+
   shared_preferences:
   # Utility Packages
   intl:
@@ -20,9 +21,8 @@ dependencies:
   url_launcher:
   url_strategy: ^0.2.0
 
-  flutter_native_splash:
   smooth_page_indicator:
-  lottie:
+  lottie: ^2.7.0
   shimmer:
   cached_network_image:
   flutter_dotenv:
@@ -64,14 +64,21 @@ dependencies:
   searchable_listview: ^2.19.3
   share_plus: ^7.0.1
 
-flutter_native_splash:
-  color: "#1e293b" # Deep slate blue for modern feel
-  image: assets\logos\app_logo_dark.png
 
 dev_dependencies:
   flutter_test:
     sdk: flutter
   flutter_lints: ^5.0.0
+  flutter_launcher_icons: ^0.13.1
+
+flutter_launcher_icons:
+  android: true
+  ios: true
+  image_path: "assets/icons/app_icon.png"
+  # Remove adaptive icon settings if you want a simple icon
+  # Or uncomment and adjust if you want adaptive icons for Android
+  # adaptive_icon_background: "#ffffff"
+  # adaptive_icon_foreground: "assets/icons/app_icon.png"
 
 flutter:
   uses-material-design: true
@@ -80,7 +87,6 @@ flutter:
   assets:
     - assets/config/.env
     - assets/img/coffee_image.jpg
-    - assets/img/sugar_cube.png
     - assets/logos/
     - assets/images/on_boarding_images/
     - assets/images/animations/

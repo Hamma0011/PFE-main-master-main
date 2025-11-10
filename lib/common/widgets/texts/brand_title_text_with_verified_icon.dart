@@ -26,13 +26,16 @@ class BrandTitleWithVerifiedIcon extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Row(
+      mainAxisSize: MainAxisSize.min,
       children: [
-        BrandTitleText(
-          title: title,
-          textAlign: textAlign,
-          maxLines: maxLines,
-          color: textColor,
-          brandTextSize: brandTextSize,
+        Flexible(
+          child: BrandTitleText(
+            title: title,
+            textAlign: textAlign,
+            maxLines: maxLines,
+            color: textColor,
+            brandTextSize: brandTextSize,
+          ),
         ),
         const SizedBox(
           width: AppSizes.xs,

@@ -21,7 +21,7 @@ class NavigationMenu extends StatelessWidget {
     const Color darkModeBackground = Color(0xFF202124); // Google dark gray
 
     return Scaffold(
-      body: Obx(() => controller.screens[controller.selectedIndex.value]),
+      body: Obx(() => controller.getScreen(controller.selectedIndex.value)),
       bottomNavigationBar: Obx(
         () => Container(
           decoration: BoxDecoration(

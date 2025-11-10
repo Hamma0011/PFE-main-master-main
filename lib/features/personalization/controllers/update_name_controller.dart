@@ -39,7 +39,8 @@ class UpdateNameController extends GetxController {
         : "";
   }
 
-  Future<void> updateUserName() async {
+  /// Retourne true si la mise à jour a réussi, false sinon
+  Future<bool> updateUserName() async {
     try {
       TFullScreenLoader.openLoadingDialog(
           "Nous sommes en train de mettre à jour vos informations...",
@@ -48,12 +49,12 @@ class UpdateNameController extends GetxController {
       final isConnected = await NetworkManager.instance.isConnected();
       if (!isConnected) {
         TFullScreenLoader.stopLoading();
-        return;
+        return false;
       }
 
       if (!updateUserNameFormKey.currentState!.validate()) {
         TFullScreenLoader.stopLoading();
-        return;
+        return false;
       }
 
       Map<String, dynamic> name = {
@@ -76,17 +77,27 @@ class UpdateNameController extends GetxController {
           : null;
 
       userController.user.refresh();
+      
+      // Fermer le loader
       TFullScreenLoader.stopLoading();
-
-      if (Get.context != null) {
-        TLoaders.successSnackBar(
-            message: "Vos informations ont été mis à jour avec succès");
-      }
-
-      Get.back(result: true);
+      
+      // Attendre que le dialog du loader soit complètement fermé
+      await Future.delayed(const Duration(milliseconds: 300));
+      
+      // Afficher le snackbar de succès
+      TLoaders.successSnackBar(
+        title: 'Succès',
+        message: "Vos informations ont été mises à jour avec succès",
+        duration: 3,
+      );
+      
+      // Retourner true pour indiquer le succès
+      // La fermeture de la page sera gérée par le widget ChangeName
+      return true;
     } catch (e) {
       TFullScreenLoader.stopLoading();
       TLoaders.errorSnackBar(title: "Erreur !", message: e.toString());
+      return false;
     }
   }
 }

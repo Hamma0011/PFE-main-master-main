@@ -21,13 +21,13 @@
   <!-- iOS meta tags & icons -->
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black">
-  <meta name="apple-mobile-web-app-title" content="cmandi_supabase">
+  <meta name="apple-mobile-web-app-title" content="PreOrder">
   <link rel="apple-touch-icon" href="icons/Icon-192.png">
 
   <!-- Favicon -->
-  <link rel="icon" type="image/png" href="favicon.png">
+  <link rel="icon" type="image/png" href="assets/icons/app_icon.png">
 
-  <title>cmandi_supabase</title>
+  <title>PreOrder</title>
   <link rel="manifest" href="manifest.json">
   
   <meta content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" name="viewport">
@@ -101,20 +101,28 @@
       right: 0;
     }
   </style>
-  <script id="splash-screen-script">
-    function removeSplashFromWeb() {
-      document.getElementById("splash")?.remove();
-      document.getElementById("splash-branding")?.remove();
-      document.body.style.background = "transparent";
+  <script>
+    // Ensure title is set immediately and persists
+    document.title = "PreOrder";
+    
+    // Prevent Flutter from changing the title if needed
+    window.addEventListener('flutter-first-frame', function() {
+      // Optionally keep your title or allow Flutter to manage it
+      setTimeout(() => {
+        if (document.title === "" || document.title === window.location.href) {
+          document.title = "PreOrder";
+        }
+      }, 100);
+    });
+    
+    // Fallback for initial load
+    if (document.title === "" || document.title === window.location.href) {
+      document.title = "PreOrder";
     }
   </script>
+
 </head>
 <body>
-  <picture id="splash">
-      <source srcset="splash/img/light-1x.png 1x, splash/img/light-2x.png 2x, splash/img/light-3x.png 3x, splash/img/light-4x.png 4x" media="(prefers-color-scheme: light)">
-      <source srcset="splash/img/dark-1x.png 1x, splash/img/dark-2x.png 2x, splash/img/dark-3x.png 3x, splash/img/dark-4x.png 4x" media="(prefers-color-scheme: dark)">
-      <img class="center" aria-hidden="true" src="splash/img/light-1x.png" alt="">
-  </picture>
   
   
   

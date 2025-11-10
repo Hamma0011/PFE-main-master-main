@@ -28,7 +28,16 @@ class UserController extends GetxController {
   final profileLoading = false.obs;
   Rx<UserModel> user = UserModel.empty().obs;
 
-  final userRepository = Get.find<UserRepository>();
+  // Lazy access to UserRepository to avoid initialization issues
+  UserRepository get userRepository {
+    try {
+      return Get.find<UserRepository>();
+    } catch (e) {
+      // If UserRepository is not found, initialize it
+      return Get.put(UserRepository(), permanent: true);
+    }
+  }
+  
   RealtimeChannel? _userBanChannel;
 
   final hidePassword = false.obs;

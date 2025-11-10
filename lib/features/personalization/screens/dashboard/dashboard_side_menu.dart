@@ -106,25 +106,23 @@ class DashboardSideMenu extends StatelessWidget {
                   dark: dark,
                 ),
 
-                // Gérer commandes
-                if (isAdmin || userController.user.value.role == 'Gérant')
+                // Gérer commandes (Gérant seulement)
+                if (!isAdmin && userController.user.value.role == 'Gérant')
                   _buildMenuItem(
                     context: context,
                     icon: Iconsax.shopping_bag,
                     title: 'Gérer commandes',
                     isSelected: currentRoute == 'orders',
                     onTap: () async {
-                      if (!isAdmin) {
-                        final etab = await EtablissementController.instance
-                            .getEtablissementUtilisateurConnecte();
-                        if (etab == null ||
-                            etab.statut != StatutEtablissement.approuve) {
-                          TLoaders.errorSnackBar(
-                            message:
-                                'Accès désactivé tant que votre établissement n\'est pas approuvé.',
-                          );
-                          return;
-                        }
+                      final etab = await EtablissementController.instance
+                          .getEtablissementUtilisateurConnecte();
+                      if (etab == null ||
+                          etab.statut != StatutEtablissement.approuve) {
+                        TLoaders.errorSnackBar(
+                          message:
+                              'Accès désactivé tant que votre établissement n\'est pas approuvé.',
+                        );
+                        return;
                       }
                       Get.to(() => GerantOrderManagementScreen());
                     },

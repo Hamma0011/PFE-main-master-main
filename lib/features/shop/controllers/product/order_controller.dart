@@ -810,11 +810,11 @@ class OrderController extends GetxController {
 
       // 1. Restaurer le stock des anciens articles
       try {
-        debugPrint('🔄 Restauration du stock pour les anciens articles');
+        debugPrint(' Restauration du stock pour les anciens articles');
         await _augmenterStockCommande(order.items);
-        debugPrint('✅ Stock restauré avec succès');
+        debugPrint(' Stock restauré avec succès');
       } catch (e, stackTrace) {
-        debugPrint('❌ Erreur lors de la restauration du stock: $e');
+        debugPrint(' Erreur lors de la restauration du stock: $e');
         debugPrint('Stack trace: $stackTrace');
       }
 
@@ -967,12 +967,12 @@ class OrderController extends GetxController {
 
   /// Diminue le stock des produits stockables lors de la création d'une commande
   Future<void> _diminuerStockCommande(List<CartItemModel> items) async {
-    debugPrint('📦 Début de la diminution du stock pour ${items.length} items');
+    debugPrint(' Début de la diminution du stock pour ${items.length} items');
 
     for (final item in items) {
       try {
         debugPrint(
-            '📦 Traitement du produit: ${item.productId}, quantité: ${item.quantity}');
+            ' Traitement du produit: ${item.productId}, quantité: ${item.quantity}');
 
         // Récupérer le produit pour vérifier s'il est stockable
         final productResponse = await _db
@@ -982,10 +982,10 @@ class OrderController extends GetxController {
             .single();
 
         final isStockable = productResponse['est_stockable'] as bool? ?? false;
-        debugPrint('📦 Produit ${item.productId} est stockable: $isStockable');
+        debugPrint(' Produit ${item.productId} est stockable: $isStockable');
 
         if (!isStockable) {
-          debugPrint('📦 Produit ${item.productId} non stockable, ignoré');
+          debugPrint(' Produit ${item.productId} non stockable, ignoré');
           continue; // Produit non stockable, passer au suivant
         }
 
@@ -1278,7 +1278,7 @@ class OrderController extends GetxController {
       );
       return result;
     } catch (e) {
-      debugPrint('❌ Erreur lors de la demande de confirmation: $e');
+      debugPrint(' Erreur lors de la demande de confirmation: $e');
       return null;
     }
   }

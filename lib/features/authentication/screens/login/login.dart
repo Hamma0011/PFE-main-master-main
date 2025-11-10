@@ -1,13 +1,9 @@
 import 'package:caferesto/utils/device/device_utility.dart';
 import 'package:caferesto/utils/helpers/helper_functions.dart';
 import 'package:flutter/material.dart';
-import 'package:get/get.dart';
 
 import '../../../../common/styles/spacing_styles.dart';
-import '../../../../common/widgets.login_signup/form_divider.dart';
-import '../../../../common/widgets.login_signup/social_buttons.dart';
 import '../../../../utils/constants/sizes.dart';
-import '../../../../utils/constants/text_strings.dart';
 import 'widgets/login_form.dart';
 import 'widgets/login_header.dart';
 
@@ -34,9 +30,9 @@ class LoginScreen extends StatelessWidget {
       children: [
         TLoginHeader(),
         const TLoginForm(),
-        TFormDivider(dividerText: TTexts.orSignInWith.capitalize!),
-        const SizedBox(height: AppSizes.spaceBtwSections),
-        const TSocialButtons(),
+        // TFormDivider(dividerText: TTexts.orSignInWith.capitalize!),
+        // const SizedBox(height: AppSizes.spaceBtwSections),
+        // const TSocialButtons(),
       ],
     );
 

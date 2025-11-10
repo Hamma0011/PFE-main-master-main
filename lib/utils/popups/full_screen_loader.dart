@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import '../constants/colors.dart';
+import '../constants/sizes.dart';
 import '../helpers/helper_functions.dart';
 import '../loaders/animation_loader.dart';
 
@@ -16,39 +17,26 @@ class TFullScreenLoader {
     showDialog(
       context: Get.overlayContext!,
       barrierDismissible: false,
-      builder: (_) => PopScope(
-        canPop: false,
-        child: Scaffold(
-          backgroundColor: THelperFunctions.isDarkMode(Get.context!)
-              ? AppColors.dark
-              : AppColors.white,
-          body: SafeArea(
-            child: Container(
-              width: double.infinity,
-              height: double.infinity,
-              alignment: Alignment.center,
-              child: SingleChildScrollView(
-                physics: const NeverScrollableScrollPhysics(),
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  crossAxisAlignment: CrossAxisAlignment.center,
-                  children: [
-                    // Add some padding for very small screens
-                    Padding(
-                      padding: EdgeInsets.all(
-                          MediaQuery.of(Get.context!).size.height * 0.02),
-                      child: TAnimationLoaderWidget(
-                        text: text,
-                        animation: animation,
-                      ),
-                    ),
-                  ],
+      builder: (BuildContext context) {
+        final isDark = THelperFunctions.isDarkMode(context);
+        return PopScope(
+          canPop: false,
+          child: Scaffold(
+            backgroundColor: isDark ? AppColors.dark : AppColors.white,
+            body: SafeArea(
+              child: Center(
+                child: Padding(
+                  padding: const EdgeInsets.all(AppSizes.defaultSpace),
+                  child: TAnimationLoaderWidget(
+                    text: text,
+                    animation: animation,
+                  ),
                 ),
               ),
             ),
           ),
-        ),
-      ),
+        );
+      },
     );
   }
 

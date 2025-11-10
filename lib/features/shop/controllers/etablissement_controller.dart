@@ -418,6 +418,28 @@ class EtablissementController extends GetxController {
     }
   }
 
+  // Pour Store - charger tous les établissements approuvés (indépendamment du rôle)
+  Future<List<Etablissement>> getApprovedEtablissementsForStore() async {
+    try {
+      isLoading.value = true;
+      // Charger tous les établissements depuis le repository
+      final data = await repo.getAllEtablissements();
+      // Filtrer pour ne garder que les établissements approuvés
+      final approved = data
+          .where((e) => e.statut == StatutEtablissement.approuve)
+          .toList();
+      // Mettre à jour la liste réactive avec tous les établissements approuvés
+      etablissements.assignAll(approved);
+      return approved;
+    } catch (e) {
+      print('Erreur getApprovedEtablissementsForStore: $e');
+      TLoaders.errorSnackBar(message: 'Erreur chargement établissements: $e');
+      rethrow;
+    } finally {
+      isLoading.value = false;
+    }
+  }
+
   Future<Etablissement?> getEtablissementWithOwner(String id) async {
     try {
       // Chercher d'abord dans la liste locale

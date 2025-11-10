@@ -348,6 +348,8 @@ class GerantDashboardScreen extends StatelessWidget {
         double iconSize;
         double valueFontSize;
         double titleFontSize;
+        double horizontalPadding;
+        double verticalPadding;
         
         if (constraints.maxWidth > 1200) {
           // Desktop large
@@ -356,6 +358,8 @@ class GerantDashboardScreen extends StatelessWidget {
           iconSize = 16;
           valueFontSize = 14;
           titleFontSize = 10;
+          horizontalPadding = AppSizes.sm;
+          verticalPadding = AppSizes.xs;
         } else if (constraints.maxWidth > 800) {
           // Desktop moyen / Tablette large
           crossAxisCount = 3;
@@ -363,6 +367,8 @@ class GerantDashboardScreen extends StatelessWidget {
           iconSize = 16;
           valueFontSize = 14;
           titleFontSize = 10;
+          horizontalPadding = AppSizes.sm;
+          verticalPadding = AppSizes.xs;
         } else if (constraints.maxWidth > 600) {
           // Tablette
           crossAxisCount = 2;
@@ -370,21 +376,34 @@ class GerantDashboardScreen extends StatelessWidget {
           iconSize = 18;
           valueFontSize = 16;
           titleFontSize = 11;
-        } else {
-          // Mobile
+          horizontalPadding = AppSizes.sm;
+          verticalPadding = AppSizes.xs;
+        } else if (constraints.maxWidth > 400) {
+          // Mobile moyen
           crossAxisCount = 1;
-          childAspectRatio = 3.0;
+          childAspectRatio = 3.2;
           iconSize = 20;
           valueFontSize = 18;
           titleFontSize = 12;
+          horizontalPadding = AppSizes.sm;
+          verticalPadding = AppSizes.xs;
+        } else {
+          // Mobile petit (Galaxy A50 et similaires)
+          crossAxisCount = 1;
+          childAspectRatio = 3.5;
+          iconSize = 18;
+          valueFontSize = 16;
+          titleFontSize = 11;
+          horizontalPadding = AppSizes.xs;
+          verticalPadding = AppSizes.xs / 2;
         }
         
         return GridView.count(
           shrinkWrap: true,
           physics: const NeverScrollableScrollPhysics(),
           crossAxisCount: crossAxisCount,
-          crossAxisSpacing: AppSizes.sm,
-          mainAxisSpacing: AppSizes.sm,
+          crossAxisSpacing: constraints.maxWidth < 400 ? AppSizes.xs : AppSizes.sm,
+          mainAxisSpacing: constraints.maxWidth < 400 ? AppSizes.xs : AppSizes.sm,
           childAspectRatio: childAspectRatio,
           children: [
             _buildStatCard(
@@ -396,6 +415,8 @@ class GerantDashboardScreen extends StatelessWidget {
               iconSize: iconSize,
               valueFontSize: valueFontSize,
               titleFontSize: titleFontSize,
+              horizontalPadding: horizontalPadding,
+              verticalPadding: verticalPadding,
             ),
             _buildStatCard(
               'Revenus Total',
@@ -406,6 +427,8 @@ class GerantDashboardScreen extends StatelessWidget {
               iconSize: iconSize,
               valueFontSize: valueFontSize,
               titleFontSize: titleFontSize,
+              horizontalPadding: horizontalPadding,
+              verticalPadding: verticalPadding,
             ),
             _buildStatCard(
               'Revenus Aujourd\'hui',
@@ -416,6 +439,8 @@ class GerantDashboardScreen extends StatelessWidget {
               iconSize: iconSize,
               valueFontSize: valueFontSize,
               titleFontSize: titleFontSize,
+              horizontalPadding: horizontalPadding,
+              verticalPadding: verticalPadding,
             ),
             _buildStatCard(
               'Revenus Ce Mois',
@@ -426,6 +451,8 @@ class GerantDashboardScreen extends StatelessWidget {
               iconSize: iconSize,
               valueFontSize: valueFontSize,
               titleFontSize: titleFontSize,
+              horizontalPadding: horizontalPadding,
+              verticalPadding: verticalPadding,
             ),
             _buildStatCard(
               'Commandes En Attente',
@@ -436,6 +463,8 @@ class GerantDashboardScreen extends StatelessWidget {
               iconSize: iconSize,
               valueFontSize: valueFontSize,
               titleFontSize: titleFontSize,
+              horizontalPadding: horizontalPadding,
+              verticalPadding: verticalPadding,
             ),
             _buildStatCard(
               'Commandes Actives',
@@ -446,6 +475,8 @@ class GerantDashboardScreen extends StatelessWidget {
               iconSize: iconSize,
               valueFontSize: valueFontSize,
               titleFontSize: titleFontSize,
+              horizontalPadding: horizontalPadding,
+              verticalPadding: verticalPadding,
             ),
             _buildStatCard(
               'Produits',
@@ -456,6 +487,8 @@ class GerantDashboardScreen extends StatelessWidget {
               iconSize: iconSize,
               valueFontSize: valueFontSize,
               titleFontSize: titleFontSize,
+              horizontalPadding: horizontalPadding,
+              verticalPadding: verticalPadding,
             ),
             _buildStatCard(
               'Stock Faible',
@@ -466,6 +499,8 @@ class GerantDashboardScreen extends StatelessWidget {
               iconSize: iconSize,
               valueFontSize: valueFontSize,
               titleFontSize: titleFontSize,
+              horizontalPadding: horizontalPadding,
+              verticalPadding: verticalPadding,
             ),
           ],
         );
@@ -482,9 +517,11 @@ class GerantDashboardScreen extends StatelessWidget {
     double iconSize = 16,
     double valueFontSize = 14,
     double titleFontSize = 10,
+    double horizontalPadding = 8.0,
+    double verticalPadding = 4.0,
   }) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: AppSizes.sm, vertical: AppSizes.xs),
+      padding: EdgeInsets.symmetric(horizontal: horizontalPadding, vertical: verticalPadding),
       decoration: BoxDecoration(
         color: dark ? AppColors.darkContainer : Colors.white,
         borderRadius: BorderRadius.circular(AppSizes.cardRadiusSm),
@@ -499,39 +536,48 @@ class GerantDashboardScreen extends StatelessWidget {
       ),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.center,
+        mainAxisSize: MainAxisSize.min,
         children: [
-          Container(
-            padding: EdgeInsets.all(iconSize * 0.4),
-            decoration: BoxDecoration(
-              color: color.withOpacity(0.1),
-              borderRadius: BorderRadius.circular(6),
+          Flexible(
+            flex: 0,
+            child: Container(
+              padding: EdgeInsets.all(iconSize * 0.35),
+              decoration: BoxDecoration(
+                color: color.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(6),
+              ),
+              child: Icon(icon, color: color, size: iconSize),
             ),
-            child: Icon(icon, color: color, size: iconSize),
           ),
-          const SizedBox(width: AppSizes.xs),
+          SizedBox(width: horizontalPadding > AppSizes.xs ? AppSizes.xs : AppSizes.xs / 2),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               mainAxisAlignment: MainAxisAlignment.center,
               mainAxisSize: MainAxisSize.min,
               children: [
-                Text(
-                  value,
-                  style: Theme.of(Get.context!).textTheme.titleMedium?.copyWith(
-                    fontWeight: FontWeight.bold,
-                    color: color,
-                    fontSize: valueFontSize,
+                FittedBox(
+                  fit: BoxFit.scaleDown,
+                  alignment: Alignment.centerLeft,
+                  child: Text(
+                    value,
+                    style: Theme.of(Get.context!).textTheme.titleMedium?.copyWith(
+                      fontWeight: FontWeight.bold,
+                      color: color,
+                      fontSize: valueFontSize,
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
                   ),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
                 ),
+                const SizedBox(height: 2),
                 Text(
                   title,
                   style: Theme.of(Get.context!).textTheme.bodySmall?.copyWith(
                     color: Colors.grey,
                     fontSize: titleFontSize,
                   ),
-                  maxLines: 1,
+                  maxLines: 2,
                   overflow: TextOverflow.ellipsis,
                 ),
               ],

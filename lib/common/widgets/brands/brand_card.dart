@@ -49,18 +49,29 @@ class BrandCard extends StatelessWidget {
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   LayoutBuilder(
                     builder: (context, constraints) {
+                      // Use smaller text size on small screens to prevent overflow
+                      final screenWidth = MediaQuery.of(context).size.width;
+                      final textSize = screenWidth < 400
+                          ? TexAppSizes.small
+                          : screenWidth < 600
+                              ? TexAppSizes.medium
+                              : TexAppSizes.large;
+
                       return SizedBox(
                         width: constraints.maxWidth,
                         child: BrandTitleWithVerifiedIcon(
                           title: brand.name,
-                          brandTextSize: TexAppSizes.large,
+                          brandTextSize: textSize,
+                          maxLines: 2,
                         ),
                       );
                     },
                   ),
+                  const SizedBox(height: 2),
                   // Nombre de Produits
                   LayoutBuilder(
                     builder: (context, constraints) {
