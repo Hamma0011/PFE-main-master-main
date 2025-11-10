@@ -746,7 +746,7 @@ class OrderController extends GetxController {
       // Construire le sous-titre avec les informations de la commande
       String subTitle = isEditing
           ? 'Votre commande a été modifiée avec succès'
-          : 'Votre commande est en cours de traitement';
+          : 'Votre commande est en attente de confirmationt';
 
       // Ajouter les informations du créneau de retrait
       if (pickupDay != null && pickupTimeRange != null) {
