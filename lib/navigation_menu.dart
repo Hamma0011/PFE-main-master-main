@@ -51,7 +51,7 @@ class NavigationMenu extends StatelessWidget {
               NavigationDestination(
                 icon: Icon(Iconsax.shop, color: playStoreUnselected),
                 selectedIcon: Icon(Iconsax.shop5, color: Colors.blue[100]),
-                label: 'Store',
+                label: 'Établissement',
               ),
               NavigationDestination(
                 icon: Icon(Iconsax.heart, color: playStoreUnselected),

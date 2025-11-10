@@ -15,7 +15,7 @@ class TbrandsShimmer extends StatelessWidget {
       builder: (context, constraints) {
         final crossAxisCount = constraints.maxWidth < 600 ? 1 : 2;
         final mainAxisExtent = constraints.maxWidth < 400 ? 90.0 : 80.0;
-        
+
         return GridLayout(
           itemCount: itemCount,
           crossAxisCount: crossAxisCount,
@@ -30,7 +30,7 @@ class TbrandsShimmer extends StatelessWidget {
                 /// Image circulaire shimmer
                 TShimmerEffect(width: 50, height: 50, radius: 50),
                 const SizedBox(width: AppSizes.spaceBtwItems / 2),
-                
+
                 /// Texte shimmer
                 Expanded(
                   child: Column(
@@ -41,6 +41,7 @@ class TbrandsShimmer extends StatelessWidget {
                       /// Nom de l'établissement
                       TShimmerEffect(width: 120, height: 16),
                       const SizedBox(height: 2),
+
                       /// Nombre de produits
                       TShimmerEffect(width: 80, height: 12),
                     ],
