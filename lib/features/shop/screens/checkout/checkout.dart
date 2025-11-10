@@ -421,15 +421,6 @@ class CheckoutScreen extends StatelessWidget {
     final cartController = CartController.instance;
     final addressController = Get.find<AddressController>();
 
-    // Vérifier adresse
-    if (addressController.selectedAddress.value.id.isEmpty) {
-      TLoaders.warningSnackBar(
-        title: 'Adresse manquante',
-        message: 'Veuillez sélectionner une adresse de livraison.',
-      );
-      return;
-    }
-
     // Vérifier panier
     if (cartController.cartItems.isEmpty) {
       TLoaders.warningSnackBar(
@@ -468,15 +459,14 @@ class CheckoutScreen extends StatelessWidget {
       // Marquer que le créneau a été défini automatiquement
       creneauAutoDefini = true;
 
-      // Afficher un message informatif
-      TLoaders.successSnackBar(
-        title: 'Créneau automatique',
-        message:
-            'Un créneau de retrait a été automatiquement défini pour vous : ${orderController.selectedDay.value!} - ${orderController.selectedSlot.value!}',
-      );
+      // Le créneau sera affiché dans l'interface des produits commandés
+      // Plus besoin de snackbar
     }
 
-    final selectedAddressId = addressController.selectedAddress.value.id;
+    // Récupérer l'adresse seulement si elle existe (optionnelle)
+    final selectedAddressId = addressController.selectedAddress.value.id.isNotEmpty
+        ? addressController.selectedAddress.value.id
+        : null;
 
     // Calculate pickupDateTime based on selected day
     final now = DateTime.now();

@@ -364,13 +364,15 @@ class OrderController extends GetxController {
       minutes: 15 + tempsPreparationMinutes,
     ));
 
-    // Arrondir à l'intervalle de 30 minutes supérieur
+    // Arrondir à l'intervalle de 30 minutes inférieur (créneau contenant l'heure)
+    // Exemple : 20h35 → 20h30 (créneau 20:30 - 21:00) au lieu de 21h00
     final minutes = pickupDateTime.minute;
-    final roundedMinutes = ((minutes / 30).ceil() * 30) % 60;
-    final extraHours = ((minutes / 30).ceil() * 30 ~/ 60);
-    final roundedHours = pickupDateTime.hour + extraHours;
+    final roundedMinutes = ((minutes / 30).floor() * 30);
+    final roundedHours = pickupDateTime.hour;
 
-    // Si on dépasse 23h, passer au jour suivant
+    // Si on dépasse 23h30, passer au jour suivant
+    // Note: Si roundedMinutes = 30 et roundedHours = 23, le créneau serait 23:30 - 00:00
+    // Ce qui est géré par la vérification des horaires d'ouverture
     if (roundedHours >= 24) {
       pickupDateTime = pickupDateTime.add(const Duration(days: 1));
       pickupDateTime = DateTime(
@@ -559,16 +561,9 @@ class OrderController extends GetxController {
         return;
       }
 
-      // S'assurer qu'on a une adresse sélectionnée
+      // Récupérer l'adresse sélectionnée (peut être vide - optionnelle)
       final selectedAddress = addressController.selectedAddress.value;
-      if (selectedAddress.id.isEmpty) {
-        TFullScreenLoader.stopLoading();
-        TLoaders.warningSnackBar(
-          title: 'Adresse manquante',
-          message: 'Veuillez sélectionner une adresse de livraison.',
-        );
-        return;
-      }
+      final hasAddress = selectedAddress.id.isNotEmpty;
 
       // Vérifier si on modifie une commande existante
       final editingOrderId = cartController.editingOrderId.value;
@@ -608,8 +603,13 @@ class OrderController extends GetxController {
               '🔄 Demande de confirmation pour calculer l\'heure d\'arrivée...');
           debugPrint(
               '   - Raison: ${(pickupDateTime == null || pickupDay == null || pickupTimeRange == null) ? "Créneau non défini" : "Créneau auto-défini"}');
-          debugPrint(
-              '📍 Adresse client - Latitude: ${selectedAddress.latitude}, Longitude: ${selectedAddress.longitude}');
+          if (hasAddress) {
+            debugPrint(
+                '📍 Adresse client - Latitude: ${selectedAddress.latitude}, Longitude: ${selectedAddress.longitude}');
+          } else {
+            debugPrint(
+                '📍 Aucune adresse sélectionnée - Utilisation du GPS actuel pour le calcul');
+          }
 
           // Demander à l'utilisateur s'il accepte d'afficher son heure d'arrivée estimée
           final accepteAffichage = await _demanderConfirmationHeureArrivee();
@@ -678,7 +678,7 @@ class OrderController extends GetxController {
           totalAmount: totalAmount,
           orderDate: DateTime.now(),
           paymentMethod: checkoutController.paymentMethod,
-          address: selectedAddress,
+          address: hasAddress ? selectedAddress : null, // Adresse optionnelle
           deliveryDate: null, // Devrait être null initialement
           items: cartController.cartItems.toList(),
           pickupDateTime: pickupDateTime,
@@ -743,10 +743,16 @@ class OrderController extends GetxController {
 
       final isEditing = cartController.editingOrderId.value.isNotEmpty;
 
-      // Construire le sous-titre avec l'heure d'arrivée estimée si disponible
+      // Construire le sous-titre avec les informations de la commande
       String subTitle = isEditing
           ? 'Votre commande a été modifiée avec succès'
           : 'Votre commande est en cours de traitement';
+
+      // Ajouter les informations du créneau de retrait
+      if (pickupDay != null && pickupTimeRange != null) {
+        subTitle +=
+            '\n\n📅 Créneau de retrait :\n$pickupDay • $pickupTimeRange';
+      }
 
       // Ajouter l'heure d'arrivée estimée si elle est disponible (seulement pour les nouvelles commandes)
       if (!isEditing) {
@@ -764,13 +770,13 @@ class OrderController extends GetxController {
           // Formater l'heure d'arrivée pour l'affichage (HH:mm:ss -> HH:mm)
           final timeParts = arrivalTime.split(':');
           final formattedTime = '${timeParts[0]}:${timeParts[1]}'; // HH:mm
-          subTitle += '\n Votre heure d\'arrivée estimée : $formattedTime';
+          subTitle += '\n\n⏰ Heure d\'arrivée estimée : $formattedTime';
         }
 
         // Ajouter le temps de préparation de la commande
         if (preparationTime != null && preparationTime > 0) {
           subTitle +=
-              '\n La commande nécessite au minimum $preparationTime min pour être prête';
+              '\n\n⏳ Temps de préparation estimé : $preparationTime min';
         }
       }
 

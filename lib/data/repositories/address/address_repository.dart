@@ -61,4 +61,22 @@ class AddressRepository extends GetxController {
       rethrow;
     }
   }
+
+  /// Delete an address by ID
+  Future<void> deleteAddress(String addressId) async {
+    try {
+      final userId = AuthenticationRepository.instance.authUser!.id;
+      if (userId.isEmpty) {
+        throw ('Unable to find user information. Try again in few minutes');
+      }
+
+      await supabase
+          .from('addresses')
+          .delete()
+          .eq('id', addressId)
+          .eq('user_id', userId);
+    } catch (e) {
+      throw 'Something went wrong while deleting address information, try again later';
+    }
+  }
 }

@@ -58,8 +58,8 @@ class AddressController extends GetxController {
     super.onInit();
     // Prefill name & phone from UserController
     final user = UserController.instance.user.value;
-    name.text = user.fullName ?? '';
-    phoneNumber.text = user.phone ?? '';
+    name.text = user.fullName;
+    phoneNumber.text = user.phone;
     getAllUserAddresses(); // ⚡️ charge la sélection existante
   }
 
@@ -211,53 +211,106 @@ class AddressController extends GetxController {
   Future<dynamic> selectNewAddressPopup(BuildContext context) {
     return showModalBottomSheet(
       context: context,
-      builder: (_) => SingleChildScrollView(
-        child: Container(
-          padding: const EdgeInsets.all(AppSizes.lg),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const TSectionHeading(
-                title: 'Sélectionner une adresse',
-                showActionButton: false,
-              ),
-              FutureBuilder(
-                future: getAllUserAddresses(),
-                builder: (_, snapshot) {
-                  final response = TCloudHelperFunctions.checkMultiRecordState(
-                      snapshot: snapshot);
-                  if (response != null) return response;
-
-                  final addresses = snapshot.data!;
-                  return ListView.builder(
-                    shrinkWrap: true,
-                    itemCount: addresses.length,
-                    itemBuilder: (_, index) {
-                      final address = addresses[index];
-                      return TSingleAddress(
-                        address: address,
-                        onTap: () async {
-                          await selectAddress(address);
-                          Get.back();
-                        },
-                      );
-                    },
-                  );
-                },
-              ),
-              const SizedBox(height: AppSizes.defaultSpace * 2),
-              SizedBox(
-                width: double.infinity,
-                child: ElevatedButton(
-                  onPressed: () => Get.to(() => const AddNewAddressScreen()),
-                  child: const Text('Ajouter une nouvelle adresse'),
+      builder: (modalContext) => Obx(
+        () => SingleChildScrollView(
+          child: Container(
+            padding: const EdgeInsets.all(AppSizes.lg),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const TSectionHeading(
+                  title: 'Sélectionner une adresse',
+                  showActionButton: false,
                 ),
-              ),
-            ],
+                FutureBuilder(
+                  key: Key(refreshData.value.toString()), // Force refresh when refreshData changes
+                  future: getAllUserAddresses(),
+                  builder: (_, snapshot) {
+                    final response = TCloudHelperFunctions.checkMultiRecordState(
+                        snapshot: snapshot);
+                    if (response != null) return response;
+
+                    final addresses = snapshot.data!;
+                    if (addresses.isEmpty) {
+                      return Padding(
+                        padding: const EdgeInsets.all(AppSizes.defaultSpace),
+                        child: Center(
+                          child: Text(
+                            'Aucune adresse enregistrée',
+                            style: Theme.of(modalContext).textTheme.bodyMedium,
+                          ),
+                        ),
+                      );
+                    }
+                    return ListView.builder(
+                      shrinkWrap: true,
+                      itemCount: addresses.length,
+                      itemBuilder: (_, index) {
+                        final address = addresses[index];
+                        return TSingleAddress(
+                          address: address,
+                          onTap: () async {
+                            await selectAddress(address);
+                            Get.back();
+                          },
+                        );
+                      },
+                    );
+                  },
+                ),
+                const SizedBox(height: AppSizes.defaultSpace * 2),
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton(
+                    onPressed: () => Get.to(() => const AddNewAddressScreen()),
+                    child: const Text('Ajouter une nouvelle adresse'),
+                  ),
+                ),
+              ],
+            ),
           ),
         ),
       ),
     );
+  }
+
+  /// ───────────────────────────────────────────────
+  /// DELETE ADDRESS
+  Future<void> deleteAddress(String addressId) async {
+    try {
+      TFullScreenLoader.openLoadingDialog(
+          'Suppression en cours...', TImages.docerAnimation);
+
+      // Check internet
+      final isConnected = await NetworkManager.instance.isConnected();
+      if (!isConnected) {
+        TFullScreenLoader.stopLoading();
+        return;
+      }
+
+      // Vérifier si l'adresse à supprimer est l'adresse sélectionnée
+      final isSelectedAddress = selectedAddress.value.id == addressId;
+
+      // Supprimer l'adresse de la base de données
+      await addressRepository.deleteAddress(addressId);
+
+      // Si l'adresse supprimée était l'adresse sélectionnée, réinitialiser
+      if (isSelectedAddress) {
+        selectedAddress.value = AddressModel.empty();
+      }
+
+      TFullScreenLoader.stopLoading();
+      TLoaders.successSnackBar(
+          title: 'Adresse supprimée',
+          message: 'Votre adresse a bien été supprimée.');
+
+      // Rafraîchir la liste des adresses
+      refreshData.toggle();
+    } catch (e) {
+      TFullScreenLoader.stopLoading();
+      TLoaders.errorSnackBar(
+          title: 'Erreur', message: 'Impossible de supprimer l\'adresse : $e');
+    }
   }
 
   /// ───────────────────────────────────────────────

@@ -14,6 +14,40 @@ class TSingleAddress extends StatelessWidget {
 
   final AddressModel address;
   final VoidCallback onTap;
+  
+  /// Affiche une boîte de dialogue de confirmation avant de supprimer
+  Future<void> _showDeleteConfirmation(BuildContext context, String addressId) async {
+    final controller = AddressController.instance;
+    
+    return Get.dialog(
+      AlertDialog(
+        title: const Text('Supprimer l\'adresse'),
+        content: const Text(
+          'Êtes-vous sûr de vouloir supprimer cette adresse ? Cette action est irréversible.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Get.back(),
+            child: const Text('Annuler'),
+          ),
+          ElevatedButton(
+            onPressed: () async {
+              Get.back(); // Fermer la boîte de dialogue de confirmation
+              await controller.deleteAddress(addressId);
+              // Le modal bottom sheet se rafraîchira automatiquement grâce à refreshData.toggle()
+              // Si on est dans un écran normal, il se rafraîchira aussi
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.red,
+              foregroundColor: Colors.white,
+            ),
+            child: const Text('Supprimer'),
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final dark = THelperFunctions.isDarkMode(context);
@@ -40,8 +74,9 @@ class TSingleAddress extends StatelessWidget {
               padding: const EdgeInsets.all(8.0),
               child: Stack(
                 children: [
+                  // Icône de sélection
                   Positioned(
-                    right: 5,
+                    right: 40,
                     top: 0,
                     child: Icon(selectedAddress ? Iconsax.tick_circle5 : null,
                         color: selectedAddress
@@ -49,6 +84,20 @@ class TSingleAddress extends StatelessWidget {
                                 ? AppColors.light
                                 : AppColors.dark.withAlpha((255 * 0.6).toInt())
                             : null),
+                  ),
+                  // Bouton de suppression
+                  Positioned(
+                    right: 0,
+                    top: 0,
+                    child: IconButton(
+                      icon: Icon(
+                        Iconsax.trash,
+                        color: Colors.red.shade600,
+                        size: 20,
+                      ),
+                      onPressed: () => _showDeleteConfirmation(context, address.id),
+                      tooltip: 'Supprimer cette adresse',
+                    ),
                   ),
                   Column(
                     crossAxisAlignment: CrossAxisAlignment.start,

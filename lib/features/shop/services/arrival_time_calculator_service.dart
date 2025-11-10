@@ -120,7 +120,7 @@ class ArrivalTimeCalculatorService {
           '   - URL GraphHopper: ${url.toString().replaceAll(apiKey, '***')}');
 
       final response = await http.get(url).timeout(
-        const Duration(seconds: 10),
+        const Duration(seconds: 20),
         onTimeout: () {
           debugPrint('❌ [DEBUG] Timeout lors de l\'appel à GraphHopper');
           throw TimeoutException('Request timeout');
