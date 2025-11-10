@@ -18,12 +18,13 @@ class TListTileShimmer extends StatelessWidget {
             ),
             SizedBox(width: AppSizes.spaceBtwItems),
             Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 TShimmerEffect(
                   width: 100,
                   height: 15,
                 ),
-                SizedBox(width: AppSizes.spaceBtwItems),
+                const SizedBox(height: AppSizes.spaceBtwItems / 2),
                 TShimmerEffect(
                   width: 80,
                   height: 12,

@@ -4,14 +4,15 @@ import 'package:caferesto/common/widgets/custom_shapes/curved_edges/curved_edges
 import 'package:caferesto/common/widgets/images/t_rounded_image.dart';
 import 'package:caferesto/common/widgets/products/favorite_icon/favorite_icon.dart';
 import 'package:caferesto/features/shop/controllers/product/images_controller.dart';
-import 'package:caferesto/features/shop/screens/home/home.dart';
 import 'package:caferesto/utils/constants/colors.dart';
 import 'package:caferesto/utils/constants/sizes.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:iconsax/iconsax.dart';
 
+import '../../../../../navigation_menu.dart';
 import '../../../../../utils/helpers/helper_functions.dart';
+import '../../../controllers/navigation_controller.dart';
 import '../../../models/produit_model.dart';
 
 class TProductImageSlider extends StatelessWidget {
@@ -108,7 +109,11 @@ class TProductImageSlider extends StatelessWidget {
                 TAppBar(
                   showBackArrow: false,
                   leadingIcon: Icons.home,
-                  leadingOnPressed: () => Get.off(HomeScreen()),
+                  leadingOnPressed: () {
+                    final navigationController = Get.put(NavigationController());
+                    navigationController.selectedIndex.value = 0;
+                    Get.offAll(() => const NavigationMenu());
+                  },
                   actions: [
                     /// Favorite Icon
                     FavoriteIcon(

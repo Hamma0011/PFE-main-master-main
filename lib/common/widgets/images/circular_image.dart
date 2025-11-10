@@ -28,50 +28,27 @@ class CircularImage extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       padding: EdgeInsets.all(padding),
-      decoration: BoxDecoration(
-        shape: BoxShape.circle,
-        gradient: isActive
-            ? LinearGradient(
-                colors: [
-                  Color(0xFF833AB4),
-                  Color(0xFFFD1D1D),
-                  Color(0xFFFCB045),
-                ],
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-              )
-            : null,
-        border: isActive
-            ? null
-            : Border.all(
-                color: Colors.grey.shade300,
-                width: 1,
-              ),
-      ),
-      child: Container(
-        padding: EdgeInsets.all(padding),
-        decoration: BoxDecoration(shape: BoxShape.circle, color: Colors.white),
-        child: ClipRRect(
-            borderRadius: BorderRadius.circular(100),
-            child: isNetworkImage
-                ? CachedNetworkImage(
-                    width: width,
-                    height: height,
-                    fit: fit,
-                    imageUrl: image,
-                    progressIndicatorBuilder:
-                        (context, url, downloadProgress) => TShimmerEffect(
-                            width: width, height: height, radius: 100),
-                    errorWidget: (context, url, error) =>
-                        const Icon(Icons.error),
-                  )
-                : Image.asset(
-                    image,
-                    fit: fit,
-                    width: width,
-                    height: height,
-                  )),
-      ),
+      decoration: BoxDecoration(shape: BoxShape.circle, color: Colors.white),
+      child: ClipRRect(
+          borderRadius: BorderRadius.circular(100),
+          child: isNetworkImage
+              ? CachedNetworkImage(
+                  width: width,
+                  height: height,
+                  fit: fit,
+                  imageUrl: image,
+                  progressIndicatorBuilder:
+                      (context, url, downloadProgress) => TShimmerEffect(
+                          width: width, height: height, radius: 100),
+                  errorWidget: (context, url, error) =>
+                      const Icon(Icons.error),
+                )
+              : Image.asset(
+                  image,
+                  fit: fit,
+                  width: width,
+                  height: height,
+                )),
     );
   }
 }
